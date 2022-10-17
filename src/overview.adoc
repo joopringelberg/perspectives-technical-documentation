@@ -1,0 +1,62 @@
+:stylesheet: ./adoc-colony.css
+
+:sectnums:
+:multipage-level: 2
+:doctype: book
+:toc: left
+:toclevels: 3
+:tabsize: 2
+= Perspectives Technical Documentation
+// Joop Ringelberg <joop.ringelberg@perspect.it>
+
+This is the documentation of the design of the Perspectives Language and the implementation of the Perspectives Distributed Runtime (PDR).
+
+include::introductionToDocs.adoc[]
+
+include::introductionToPDR.adoc[]
+
+= PART I. HIGH LEVEL SYSTEM OVERVIEW
+
+This part of the documentation is organised around a functional decomposition of the Perspectives Distributed Runtime.
+
+{empty} +
+
+include::partI/parserAndCompiler.adoc[]
+
+include::partI/frp.adoc[]
+
+include::partI/stateChange.adoc[]
+
+include::partI/synchronization.adoc[]
+
+= PART II. THE LANGUAGE: DESIGN DECISIONS
+
+In this part we discuss all facets of the language, from types to identifiers, models, calculated roles and properties, perspectives and aspects.
+
+{empty} +
+
+include::partII/typeSystem.adoc[] 
+
+include::partII/identifiersVariables.adoc[]
+
+include::partII/models.adoc[]
+
+include::partII/perspectives.adoc[]
+
+include::partII/queries.adoc[]
+
+include::partII/aspects.adoc[]
+
+= PART III. IMPLEMENTATION DETAILS
+
+This is the most technical part of the documentation. 
+
+{empty} +
+
+include::partIII/pdrArchitecture.adoc[] 
+
+include::partIII/modifyingState.adoc[]
+
+include::partIII/synchronizationRevisited.adoc[]
+
+include::partIII/ffi.adoc[]

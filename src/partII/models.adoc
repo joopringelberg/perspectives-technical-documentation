@@ -1,0 +1,8 @@
+[desc="Handling models."]
+== Models
+
+include::booting_models.adoc[leveloffset=2]
+
+include::Model_versions_and_compatibility.adoc[leveloffset=2]
+
+include::Revision_handling.adoc[leveloffset=2]

@@ -1,0 +1,4 @@
+[desc="The architecture of the Perspectives Distributed Runtime"]
+== PDR architecture
+
+The PDR ...

@@ -1,0 +1,66 @@
+[desc="How to author a model and take care of indexed contexts and roles."]
+= Booting models
+
+A Perspectives Distributed Runtime installation – e.g. as included in InPlace – needs Perspectives Models to operate. The basic requirement is `model://perspectives.domains/System`. This model is retrieved automatically from the website perspectives.domains while installing InPlace. However, the end user will want to acquire more perspectives and thus needs to add models.
+
+This text explains how this is achieved in the PDR.
+
+== Models
+
+Conceptually, a model is a collection of types. Physically, it is a file (the _domeinfile_). Models reside physically in a repository on a server on the internet. A PDR installation (such as InPlace) keeps a private collection of models, usually locally.
+
+End users want to extend their perspectives and therefore need to be able to explore models published by authors. To this end, we have the context type Manifest. Instances of this type are public contexts.
+
+End users also need an overview of locally available models. These are currently collected in the end user's instance of the sys:PerspectivesSystem context. This is an _indexed context_, meaning the user can access it by entering its name in the address bar of the browser.
+
+[quote]
+Its full name would be model://perspectives.domains/MySystem. However, InPlace applies fuzzy matching to names, so MyModels stands a good chance to land you in the right place.
+
+But the MySystem context can be accessed from the menubar of InPlace, anyway. It is accessible through the Home icon.
+
+An end user whose installation does not yet have this model, will acquire it automatically upon visiting the description. (S)he then can boot the model by executing an action on the screen.
+
+=== Booting a model
+
+Using `model://perspectives.domains/Models` as an example, we’ll show the boot sequence that applies for any model. The purpose of booting is to instantiate _indexed contexts_ and _indexed roles_ of the model and register them with the system and to add the model description to the collection in MyModels.
+
+[arabic]
+. The first step is to create an instance of the context type ModelsOverview. The system will create a unique identifier for it.
+. As this type is indexed, we then create a new instance of the role IndexedContexts in sys:MySystem (the indexed context of the system model). We fill it with the context instance we created in the first step.
+. On this role we add a value to the property Name. This value is precisely the indexed name itself: `model://perspectives.domains/MyModels`. This construction enables the PDR to maintain a table of indexed names and their local (private) identifiers.
+. Finally, we add the model’s description to the list of such descriptions in MyModels.
+
+So, in the case of `model://perspectives.domains/Models`, we end up with an instance of MyModels that has just one entry: the description of its own model.
+
+These steps are implemented _in_ `model://perspectives.domains/Models` itself, in the form of an Action in the perspective of the Visitor role in the model description.
+
+Acquiring `model://perspectives.domains/Models` is different from other models in one respect: the type of the model description is contained in this model itself. That is the reason that this model is added automatically to the local installation upon visiting its description. This is the _only_ model for which this is the case. In all other models, the model is only loaded on booting.
+
+=== Booting System
+
+As stated above, model://perspectives.domains/System is a requirement for a PDR installation to operate. We cannot use a client such as InPlace to acquire this model. Hence, on installing InPlace, System is installed by the code that runs InPlace. At that time, we do not have an instance of MyModels; indeed we do not even have `model://perspectives.domains/Models`! As a consequence, System is not listed in MyModels.
+
+System differs from other models in another respect. It’s indexed names (MySystem and Me) are hard-coded and they are not listed in MySystem.
+
+== Authoring a model: booting revisited
+
+The author of a model must include the Action that allows the end user to boot it. This action is fairly standard, but its details need to be written again for each model. Here is the code for model:perspectives.domains/SimpleChat.
+
+[code]
+----
+perspective of Visitor
+	action Boot
+		-- Create the indexed context:
+		createContext cht:ChatApp bound to IndexedContext in sys:MySystem
+
+		-- Add the indexed name:
+		Name = "model://perspect.it/SimpleChat$MyChats"
+			for sys:MySystem >> filter IndexedContext 
+				with binding >> context >> contextType == cht:ChatApp
+
+		-- Add the model description to MyModels:
+		bind https://cw.perspect.it/SimpleChat to LocalModels 
+			in mod:MyModels
+----
+
+Obviously, the value `model://perspect.it/SimpleChat$MyChats` should be customised in each model.

@@ -1,0 +1,7 @@
+[desc="Changing state by assignment."]
+== Assignment and state change
+
+include::Overview_of_state_change_mechanisms.adoc[leveloffset=2]
+
+include::Assignment.adoc[leveloffset=1]
+

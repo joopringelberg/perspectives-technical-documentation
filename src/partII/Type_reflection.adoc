@@ -1,0 +1,83 @@
+[desc="We must be able to look up the definition of a type at all times."]
+= Type reflection
+
+== Introduction
+
+Each instance has a type. That goes for contexts, roles, and also property values. In this text I hold it to be an invariant that the core can always reflect on the type of its instances, because the model describing the type is available in the local installation.
+
+Terminology: a type falls into a namespace; a namespace is described in exactly one model. A type is known locally if it is described in a model present in the local installation.
+
+A model can be added by the end user to his local installation. He does so to be able to use new perspectives. But a model can also be implicitly added as a result of another action. Such a model is added:
+
+* because it is an import of a model imported explicitly;
+* because the user performs an action through the user interface that constructs a context or role instance from a description contained in the code of that user interface, where the type is not locally known;
+* because a peer constructs an instance that the end user (the recipient) has a perspective on while the type of that instance is not locally known;
+* because the end user is retrieving an instance from a public store whose type is not locally known;
+* because the end user uses the core to parse and compile a model text.
+
+== Responsibilities of authors
+
+Currently we require the author of a model to add the dependencies to his installation by hand.
+
+== Responsibilities of the authors of screens
+
+We consider the API *not* to be a system boundary. In other words, the author of code that addresses the API must behave responsibly in the sense that his calls
+
+* only use instance identifiers from instances with a locally known type.
+* only use type identifiers from locally known types.
+
+[quote]
+With one exception: the type identifier used in a RolDescription or ContextDescription is checked and, when not locally known, the corresponding type is loaded.
+
+This may be easier than it looks. In the first place: instances are only created in the core ('behind' the API) and for those we guarantee that their types are known locally. Thus, because programs that use the API can only work with instances coming from the core, their type must be known locally. The only exception are indexed names. The author must spell them right; however, errors with this become apparent very quickly during development.
+
+In the second place: almost all type identifiers that API users can use in their calls, also come to him through the API. These are either types of instances (which are known locally for each construction), or types that are retrieved directly from a model (and are therefore known locally, too).
+
+Only some type identifiers, that are hard-coded into the client code, are the responsibility of the client's author. An example is the Role component. The value of the 'role' prop must be traceable to a locally known type. If the author makes a mistake, this will become apparent very quickly when trying out the screens.
+
+The React library (the primary means to build client programs) behaves responsibly.
+
+== Reflection on model:System is guaranteed
+
+The setupUser function ensures that model:System is present in the local installation.
+
+== Type reflection on locally created instances is guaranteed
+
+We want to be able to guarantee type reflection on existing instances. Instances have two sources: the 'own' user, and peers.
+
+The user can only create instances through the API. If a ContextDescription or RolDescription is included in the API call, we check whether the given types are present locally. This is because these can be passed as data (value of React props) to the react components CreateContext, CreateContext_, CreateContextInExistingRol, RoleInstance and RoleInstances.
+
+Because of this check, we know that type reflection is possible on all locally created instances.
+
+== Type reflection on instances made by peers is guaranteed
+
+Instances created by peers come in in the form of deltas in transactions. Deltas come in in a particular order:
+
+* first the external role of a context is created;
+* then the context itself (and we add the external role to it automatically without there being a delta for it);
+* then the role instances of the context;
+* finally, the roles are placed in the contexts.
+
+If the type of the context instance is locally available, all of its role types will be locally available, too. Conversely, if a role type is locally available, so will be its context type.
+
+The same applies to a role instance: if the role type is locally available, all of its property types will be locally available as well.
+
+On receiving a UniverseRoleDelta, the Perspectives.Sync.HandleTransaction module checks whether the type to be created is present locally. This also applies to the external role of a context. Hence, after receiving the delta that describes the external role, we can be sure its context type is locally available, so we do not need to check types for a UniverseContextDelta. And if we have the role type, we also have the property types. In short, type reflection on instances created by peers is guaranteed.
+
+== When the user fills a role
+
+At first glance, it seems that if the core fills a role, the filler type should be locally available, too. After all, the role instance has been retrieved from the local storage and we are guaranteed to be able to reflect on its type. That type description includes the required type of the role filler, so it would seem the type of the filling instance must be locally known.
+
+But it is possible to fill a role with an instance that is a _specialization_ of the type required in the model. That specialization may have a different namespace and the model in question may not yet be stored locally. For this reason, the setBinding function checks whether the filler type is locally available. If not, it adds that model to the local installation.
+
+Basically, when constructing a bond, the invariant is enforced.
+
+== Type reflection on instances from public storage
+
+A core adding a role instance to a public store will certainly be able to reflect on the type of that instance. But a core that retrieves that instance cannot be sure of it. So this is a very different situation than retrieving from local storage, because there the core that saves and retrieves is one and the same.
+
+Therefore, we should always check that we have the model that describes the type of a role instance that we retrieve from public storage.
+
+We (almost) always retrieve a context instance from the reference of a role instance. The type of a role instance's context is described in the same model as that role instance's type itself, so we never need to check that we have the model needed for reflection on context instances. Never, except in the case of Uniquely Identifying Readable Names (UIRN): these are URLs in the cw subdomain without a query part, such as https://cw.nlnet.nl. Such an identifier can, but does not have to, identify a context instance whose type is not known locally.
+
+A circumstance under which it is not known locally is, for example, if NLnet has defined its own model (model://NLnet.nl for example) and has made an instance of one type available under the identifier https://cw.nlnet.nl. A user who enters that name for the first time in his browser will not have model://NLnet.nl.

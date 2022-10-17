@@ -1,0 +1,27 @@
+[desc="The notion of the origin of a query."]
+== Current context and current role
+
+=== What is a query applied to?
+The Perspectives Language consists partly of _expressions_ used:
+
+[arabic]
+. to create a CalculatedRole or CalculatedProperty;
+. as the condition of a bot rule (the left hand side of the rule);
+. to retrieve values for assignment expressions in the right hand side of the rule;
+. to retrieve values to be bound in a let-expression.
+
+An expression traces a path through the network of roles and contexts, possibly ending in a property’s values. Obviously these paths must start somewhere:
+
+* For a CalculatedRole, the path starts the context that we calculate the role for;
+* For a CalculatedProperty, it starts with the role that we calculate the property for;
+* For all expressions in a rule (condition and those that provide arguments to assignment operations) it starts with the context that the rule is executed in.
+
+A note on let* expressions. Though they introduce a new scope for the modeller to bind names in to values, they are just expressions that continue the path.
+
+=== Re-basing the path
+
+Sometimes it is necessary to return, in the middle of a calculation, to the base of a calculation in order to retrieve some value from it. An example might be when we want to filter one role with a property value sitting on another. While in theory it should be possible to retrace the path back to the root, this is at least inconvenient.
+
+For that reason we introduce the notion of _current context_. The current context is, for each expression, the base context with respect to which it is calculated (as given above). The modeller can start a subexpression with the keyword currentcontext.
+
+Similarly, he can use the keyword currentrole in the definition of a CalculatedProperty.

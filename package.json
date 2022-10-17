@@ -1,0 +1,25 @@
+{
+  "name": "perspectives-technical-documentation",
+  "version": "0.0.0",
+  "description": "Technical documentation of Perspectives",
+  "scripts": {
+    "build": "./build.sh",
+    "publish": "./publish.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joopringelberg/perspectives-technical-documentation.git"
+  },
+  "keywords": [
+    "Perspectives",
+    "Documentation"
+  ],
+  "author": "Joop Ringelberg",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/joopringelberg/perspectives-technical-documentation/issues"
+  },
+  "homepage": "https://github.com/joopringelberg/perspectives-technical-documentation#readme",
+  "dependencies": {
+  }
+}

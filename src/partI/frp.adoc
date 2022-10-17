@@ -1,0 +1,7 @@
+[desc="Automatic update of query results through dependency tracking."]
+== Functional Reactive Pattern
+
+The perspectives Distributed Runtime implements the _functional reactive pattern_. To be more specific, it keeps requests issued by clients up to date with changes of the underlying structure of context- and role instances. This text explains how this works.
+
+
+include::Implementing_the_Functional_Reactive_Pattern.adoc[leveloffset=1]

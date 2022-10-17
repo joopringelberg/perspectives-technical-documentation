@@ -1,0 +1,10 @@
+[desc="In which we discuss the smallest lexical items of the language."]
+== Identifiers and Variables
+
+include::Expanding_prefixed_names.adoc[leveloffset=2]
+
+include::Type_and_resource_identifiers.adoc[leveloffset=2]
+
+include::Mapping_Model_Identifiers_to_Storage_Locations.adoc[leveloffset=2]
+
+include::currentcontext_and_currentrole.adoc[leveloffset=1]

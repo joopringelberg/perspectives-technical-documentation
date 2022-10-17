@@ -1,0 +1,4 @@
+[desc="A perspective is not a type but a relation between roles."]
+== Perspectives
+
+Bla bla bla

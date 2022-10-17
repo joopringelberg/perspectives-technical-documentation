@@ -1,0 +1,8 @@
+[desc="Roles and properties can be calculated."]
+== Queries
+
+include::Binder_vs_Filler_terminology.adoc[leveloffset=2]
+
+include::State_and_dependency_tracking.adoc[leveloffset=2]
+
+// Add a section on dependency tracking here.

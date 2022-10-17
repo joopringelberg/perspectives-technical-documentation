@@ -1,0 +1,8 @@
+[desc="A Perspectives model consists mainly of types, that are composable."]
+== The Type System
+
+include::Semantics_of_the_Perspectives_Language.adoc[leveloffset=2]
+
+include::Abstract_Data_Type.adoc[leveloffset=2]
+
+include::Type_reflection.adoc[leveloffset=2]

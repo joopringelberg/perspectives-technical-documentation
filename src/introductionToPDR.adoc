@@ -1,0 +1,167 @@
+[desc="A relatively high level overview of the architecture."]
+== Introduction to the PDR
+
+=== What we cover in this chapter
+The purpose served by this text is to provide a clear view of 
+
+*	the functional components that make up the Perspectives software stack;
+*	the connections between them
+*	the required and / or desired non-functional characteristics of these connections.
+
+The suitability of concrete technologies for the Perspectives Stack can be judged by comparing them with these requirements.
+This text is informal (and imprecise) in the sense that the protocols and message formats between components is not given in detail.
+
+=== About Perspectives
+Let's introduce Perspectives in terms of some questions and their answers.
+
+_What is Perspectives for?_ We have created a modelling language from which working applications can be generated, that with some fine tuning of screens  can have real practical usage. The language is well suited for a range of programs that support human co-operation; it is not meant to be a general programming language. Nor is it a high-throughput computing platform: the human pace of information processing / generation is the norm.
+
+_What is it like, conceptually?_ Think Access List Control (ACL). IT professionals are familiar with ACL as a way to describe and enforce limited access to computing resources for a variety of end users. ACL systems are applied to existing systems, as an add-on. With Perspectives we turn that on its head: from the specification of whom is entitled to what (viz. information and basic CRUD actions) we generate a working system. Thus, privacy is not an afterthought; it is the design itself.
+
+_What is the main technical challenge?_ Usually, ACL systematics are implemented as a restriction of an otherwise very permissive system (anything goes for any user). And this latter system almost invariably involves some form of shared persistent memory: central databases, a central server or a central bus providing access to modifiable stores. Not so in Perspectives. People form a network by their interactions; as users of Perspectives, each of them runs an installation of InPlace (the Perspectives Distributed Runtime (PDR) plus a GUI, plus a private database, usually local). Considered as nodes in a network, a crucial observation is that all nodes are functionally equal (no clients, no servers, no hubs, etc). The main technical challenge for creating the PDR then is to figure out, for each possible modification of the allowed data structures that is initiated on some PDR, what other PDR's should be informed. And, as a corollary, it is to check each received modification against the model to protect the user against unauthorised modifications.
+
+_How will it be used?_ We hope that InPlace, the framework program, will attract a community of users and of makers, where the latter create models and screens that contribute functionality. Models + screens ('apps') will be distributed through repositories (webstore-like servers). Models will be downloaded once and stored in the (local) private database, too.
+
+=== Architecture: requirements
+
+The software stack should be built from four high level components:
+
+1.	a Perspectives Runtime (PR);
+2.	a persistent store of information (Store);
+3.	a user interface (UI);
+4.	an authentication provider (AP).
+
+==== Perspectives runtime
+Please note that in this paragraph we discuss Perspectives runtime in terms of _requirements_, rather than the actual Perspectives Distributed Runtime that is the main topic of this technical documentation. See <<pdr>> for a first introduction of the actual system.
+
+A runtime serves a number of functions:
+
+1.	It provides answers to requests sent in by (a single instance of) the User Interface. There is a limited number of requests that is accepted, answered in terms of role instances, context instances and property values.
+2.	It handles commands sent in by the UI. Again, the number of commands is very limited and allows the end user to add or remove role instances to contexts, to create and remove context instances, and to modify, add or remove property values. It also allows the user to bind some role to another.
+3.	When we say the PR handles commands we mean that it ensures that subsequent requests reflect the changes ordained before. In practice, this means it stores contexts, roles and property values (or rather causes them to be stored, see Persistent store of information).
+4.	For each elementary change effected by a command, it constructs one or more Deltas. A Delta is like a remote procedure call. It contains enough information for another PR to reproduce the change. Deltas are collected in Transactions. Transactions are sent to other PR installations.
+5.	It handles incoming Transactions. After checking whether the sender is authorised to effect the change, each Delta is executed. This allows PR’s to synchronise their stored contexts, roles and property values.
+
+All these are governed by one or more models that authorise user roles to perform some actions (and that includes requesting contexts, roles and property values through the ui). Models are written in the Perspectives Language.
+
+A PR is not expected to be active at all times. Assuming so would simplify some aspects of the architecture.
+
+==== Persistent store of information
+The Store can be thought of as a list of all elementary changes sent in by a single end user, including endorsed changes sent to it by other end users. In practice, it will contain an accurate accumulation of all those changes. It does not allow ‘time travel’, that is, one cannot ask it to revert to a previous state.
+
+It is important to realise that each Store will be updated by exactly one PR, just as a PR will be used by exactly one end user.
+
+We consider the structure of the persistent form of contexts and roles to be internal, even though they are exchanged between PR and Store. This is because the Purescript data definitions are leading. The serialised forms derive from those data structures. The type of serialisation deployed is an implementation choice. Consequently, we only stipulate that these persistent forms are JSON.
+
+Concretely, the store should
+
+1.	Provide the ability to create named compartments to store items in;
+2.	Be able to store and produce on request JSON documents in such a compartment;
+3.	Be able to provide a list of the documents in a compartment
+
+There is a number of self-evident desired non-functionals, such as reliability, lots of capacity, etc. 
+
+Performance is important in the sense that the PR will very frequently request documents and update them. To some extent this requirement is relaxed because the PR caches each document it has requested. This cache is transparent with respect to updates.
+User Interface
+
+There are hardly requirements for the user interface other than in the most general of terms: it should enable a single end user to
+
+1.	Enter requests and inspect the answers sent by the PR;
+2.	Enter commands;
+3.	Identify him- or herself to the PR.
+
+A UI will often be a graphical UI presenting screens and forms. As of version v0.4.0 of Perspectives, a JavaScript proxy library is available through which a process can interface with the PR. Also, built on top of that, a ReactJS library of data containers is available that provides higher level abstractions to deal with the PR.
+
+==== Authentication provider
+
+The end user authenticates him- or herself through the UI to the PR.
+Currently, we have taken a very simple approach to authentication. The authentication provider is not a separate component. The required functionality is provided by the PR. User credentials are kept in the Store.
+
+=== Connections between components
+
+==== UI – PR
+A single end user interacts with a single instance of the PR through a UI. The connection between them should be confidential. Transport of information between them should be fast enough that it does not stand in the way of a smooth user experience (this includes all aspects of transport, such as setting up a connection, applying measures to ensure confidentiality, etc).
+
+The information items passing through the connection are usually quite small in terms of bytes when compared to current network bandwidth. The Deltas consist of alphanumeric information. Each Delta is the result of an end user action. There are no actions that lead to massive numbers of Deltas. Files can be handled as claim data: that is, the PDR is concerned with identities, not the actual items themselves.
+
+The connection should also be reliable: whenever the end user fires up his UI, it should be able to connect to its PR.
+
+Because of the nature of the UI (to enable an end user to access a PR) we assume that both components are active at the same time.
+
+The connection should not only allow the UI to approach the PR; the PR should be able to initiate a contact, too. We need this to alert the end user to changes initiated by other end users.
+
+==== PR – Store
+A single PR interacts with a single Store (conceptually). We have not yet worked out an architecture where an end user deploys multiple devices. The simplest of architectures would be one where the Stores attached (through a PR) to UI’s on multiple devices, synchronise between them. This, however, will not provide a limited user experience when the user simultaneously uses multiple devices. 
+
+So for the time being we assume the unique association between a PR and a Store. The connection between them should be
+
+*	Confidential
+*	Reliable
+*	Fast enough to handle the traffic resulting from several humans interacting through their UI (in the order of the number of relations a single person has).
+
+Again, like with the connection between UI and PR, the required bandwidth is quite limited. Because of the nature of the Store (to persist information shed by the PR) we expect it to be active at the same time as the Store.
+
+==== PR – PR
+PR’s send Transactions to each other. However, as we do not require that PR is always available as an active process, the connection between them should handle this.
+Consequently, this connection should have the characteristics of a mailbox.
+We require the following non-functionals:
+
+1.	The connection should be reliable;
+2.	The connection should be confidential
+3.	The connection should be restricted to two PRs.
+4.	The connection should have a push-character: that is, the receiver should be notified after the sender has sent a Transaction. 
+5.	The connection should be reasonably fast, ideally fast enough to allow for a chat-like experience (i.e. time delay introduced by the channel should be low enough to provide a good user experience). This, however, is not a hard requirement.
+6.	The connection should be able to handle the fact that end users will interact through mobile devices and do move around.
+
+
+[#pdr]
+=== Actual architecture and underlying technologies
+
+Now let's concentrate on the concrete architecture and the languages / systems involved in building the PDR.
+
+The core of the PDR is written in the Purescript language and compiled to Javascript. Purescript is a strict (non-lazy) variant of Haskell. The user interface consists of HTML screens, (currently, but not necessarily) written in terms of ReactJS (which is more Javascript, HTML and CSS).
+
+The architecture consists of three components:
+
+*	the client (an HTML viewer)
+*	the PDR
+*	a private database (either Couchdb or the browser’s IndexedDB)
+
+See <<img-architecture, the diagram below>>.
+
+.Application layer, React data containers and Javascript API proxy library form the client. The PDR runs in a SharedWorker. The client connects to the Distributed Runtime via window.postMessage. The PDR connects to Couchdb via HTTPS. Yellow components are ‘propriety’ (but open source). The Application Layer consists of models in PL and React-based screens. They are ‘apps’ that are ‘hosted’ in InPlace, the end user framework program (the name of the entire ensemble).
+[#img-architecture]
+image::architecture.jpg[]
+
+All run on the end users' node (laptop, desktop; in the future, tablet & mobile phone too).
+
+The PDR connects to the client through the https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker[window.postMessage] method in the browser.
+
+Both client and PDR access Couchdb over HTTPS; the latter for data and models, the former for screens (associated with a model as attachments).
+
+[quote]
+Notice that, if the private database is IndexedDB, the PDR does not connect through HTTPS to it but through API calls. This holds for screens and models, too.
+
+PDR and client both run in the browser: the PDR in a https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker[SharedWorker], the client in a window or tab in a window . 
+
+PDRs exchange information and do so exclusively through the Advanced Message Queuing Protocol (AMQP). When two PDRs are connected, they have each other’s message queue address, to which both can post Transactions (a package of Deltas on the primary data). 
+To prevent misunderstanding: only Deltas are communicated, never the primary data itself. Neither is the actual local data storage used by the PDR ever modified by any other process than the PDR itself.
+
+To connect, two installations need each other’s message queue address, requiring IP address, port and a user account on the AMQP server. This server is considered to be outside the Perspectives system (e.g. RabbitMQ).
+
+Finally. A node supports more than a single user. Each user has an account that is (currently) password protected. This account maps one to one to a Couchdb admin account for the relevant databases (a data database, a models database and a post database), or to a set of tables in IndexedDB.
+
+The installing user must have a database admin account with the Couchdb installation.
+Currently, the local account administration used by the login screen is kept in files in an IndexedDB database ('localusers'). It is accessible to processes in the https://inplace.works domain.
+
+=== Security Concerns
+
+From the above, some obvious security concerns follow. We've identified the following:
+
+1.	The local user account secrets are accessible to anyone with (enough) access to the device and with enough knowledge to access the IndexedDB database 'localusers' for the https://inplace.works domain. In other words, a users' data is as secure as his own device. Once an attacker can log in to InPlace, he can impersonate the user, and can steal his data.
+2.	An agent might try to inject Transactions into a message queue, targeting a specific user, impersonating another. This requires the message queue address of that user and the secret key of the impersonated user, to sign the Transaction. Encryption is used for authentication purposes.
++
+Note that even if an agent would successfully impersonate someone’s peer, they still can only change a persons' data in accordance with the modelled authorisations of that peer (an attacker cannot assume more authorized privileges, since the receiving peer himself 
+compares the privileges he has stored with those claimed by the attacker).
+3.	An agent with access to the device running the private Couchdb installation might manipulate its data. This would require the users' credentials for Couchdb or it would require him to set up and admin account on the Couchdb (which is as hard as Couchdb makes it, after the first Admin account has been established). 
+4.	The window.postMessage method might be vulnerable in the sense that processes running in other domains can intercept or even manipulate messages going between the screens and the PDR.

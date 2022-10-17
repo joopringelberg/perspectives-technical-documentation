@@ -1,0 +1,27 @@
+OPZET PERSPECTIVES-TECHNICAL-DOCUMENTATION REPOSITORY
+
+* highlight in asciidoc?
+	- Zie: https://docs.asciidoctor.org/asciidoctor/latest/syntax-highlighting/highlightjs/
+	- Aanpak: nu eerst als code opnemen, later syntax coloring toevoegen.
+
+* Lees de documentatie over
+	- sectnums
+	- multipage-level
+
+* Ik denk dat ik Part 1 (Introduction) niet wil splitsen in verschillende documenten
+
+PANDOC CONVERSIE
+
+pandoc input.docx -f docx -t asciidoc --wrap=none --markdown-headings=atx \
+   --extract-media=extracted-media  -o output2.adoc
+   
+MEDIA EXTRACTION
+* use a directory name derived from the document name
+* move the directory into the images directory
+* check the paths on the image: expressions
+* convert tiff to jpg (use a quick action)
+
+CROSS REFERENCES
+Omdat ik alle bestanden combineer met include, moeten alle referenties worden beschreven als binnen hetzelfde document.
+De eenvoudigste manier om dat te doen is met <<section title>>. 
+De multi-page tool maakt er vanzelf referenties naar externe files van indien nodig.

@@ -1,0 +1,2 @@
+[desc="Aspects allow us to compose types."]
+== Aspects

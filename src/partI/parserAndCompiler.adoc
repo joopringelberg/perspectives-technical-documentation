@@ -1,0 +1,8 @@
+[desc="How model source texts become executable."]
+== Parser and Compiler
+
+The PDR _executes_ models. A model is written in the Perspectives Language and stored as a file with the extension `.arc`. We call those file _source texts_. A source text cannot be interpreted directly by the PDR: we first have to convert it to a machine-readable form (a `.json` file in a particular format). In the next chapter we explain how to interpret a source text; that is, how we as humans can attribute meaning to a source text. In the chapter that follows, we explain how the PDR parses a source text and compiles a machine readable version out of it.
+
+include::Understanding_a_Perspective_model.adoc[leveloffset=2]
+
+include::Parsing_and_compiling_models.adoc[leveloffset=2]

@@ -1,0 +1,605 @@
+
+[multipage-level=3]
+[desc="How to read a Perspectives source text and attribute meaning to it."]
+= Understanding a Perspective source text
+
+== Types and scopes
+
+With this text we explain how to understand a Perspective model source text. We do not give grammar definitions here, but focus on the meaning of the various expressions instead.
+
+First of all, indentation matters. A model text consists of _blocks_ of lines with equal distance from the left margin. Such blocks can be nested arbitrarily deep. We will call such a block a _lexical scope_, or just _scope_.
+
+Second, a model is a number of _type definitions_ (at least one: the _domain_). A type definition consists of a _type declaration line_, followed by an indented block that gives the type’s details (we might call this block the _body_ of the type definition text). A type declaration can be easily recognised because it must be preceded by a keyword:
+
+* a _context_ keyword: domain, case, party, activity;
+* a _role_ keyword: user, thing, context, external;
+* or one of the keywords property, view or state.
+
+Any point in a model text (a _lexical_ position) will, of necessity, be enclosed in some scope (except for the domain type declaration line). As scopes can be nested, any given point might be inside an arbitrary number of scopes, each enclosing the other until we arrive at the domain’s body. Some, but not all, of these scopes will be type definition bodies. Now we will say that all these definitions _are visible_ from that lexical position. The first visible context definition that we encounter on ‘moving upward’, is the _current context_.
+
+== Perspectives
+
+A perspective is not a type. A perspective governs what a particular end user, in some user role in a context, can perceive of a role in that context and how he can affect that role. We call the role that a perspective is about, the _object role_ while the user role that the perspective is for is the _subject role_. A perspective may be built of three type of parts:
+
+* the _role verbs_ that the subject role may apply to the object role, such as Create and Delete;
+* the _property verbs_ that the subject role may apply to given properties of the object role, such as DeleteProperty and SetPropertyValue;
+* the _actions_ that the subject role may execute. An action is a sequence of _assignment statements_ executed in order, bundled under a name.
+
+[quote]
+Assignment statements are not explained here. See the text Assignment. However, an assignment statement either changes a context by creating or deleting a role instance, or changes a role by filling it with a role (or remove that filler) or by changing the values of its properties.
+
+Here is an example:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		thing Wishes
+		user Guest
+			perspective on Wishes
+				all roleverbs
+----
+
+User Guest can apply all role verbs to the Wishes role, in the Party context. In order to prepare ourselves for more involved texts whose meaning may not be immediately clear, lets dissect what we have.
+
+We need two concepts: the _current subject_ and the _current object_. We’ve already met the current context, and these two new concepts are just like it. Let’s pick the line all roleverbs as our lexical position. We must be able to establish for what user role this line is meant (as part of its perspective). Moving upward through the blocks, we encounter the type declaration line user Guest. Here is a rule: each user role type definition determines the _current subject_ for its body__.__ So we now know all roleverbs is meant for Guest.
+
+How about the current object? Well, a perspective on determines the current object for its body. So, putting it all together, for our lexical position all roleverbs we have
+
+* Party as the current context
+* Guest as the current subject
+* Wishes as the current object.
+
+Now it happens to be that any non-user role definition sets the current object. And we also have perspective of, setting the current subject. So the following model says exactly the same as our previous example:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		thing Wishes
+			perspective of Guest
+				all roleverbs
+		user Guest
+----
+
+Recapitulating: the current object is in scope in:
+
+* the block following a perspective on;
+* the body of a non-user role definition.
+
+The current subject is in scope in:
+
+* the block following a perspective of <user>;
+* the body of a role definition that is a user role; idem
+* the block of assignments following do for <user>, defining an action (we’ll see examples below).
+* the expression following notify <user>.
+
+In each of these cases, exactly one user role type is specified. Hence the current subject is always a single named type (but notice this may be a calculated role type that defines the disjunction of two types).
+
+== Notifications and state
+
+Often, we want to make sure that the users of an application take note of some changes. In our party example, it is important for the person throwing the party to note that his invited guests accept (or reject) the invitation. To make sure that some changes do not go unnoticed, we introduce the mechanism of notification.
+
+A _notification_ is something that draws the end users’ attention. Usually, a notification also consists of some message (like a line of text). Crucially, a notification _should happen under specific circumstances_. In Perspectives, we model this with _state transitions_.
+
+A context can be in a specific _state_, and so can a role. This state must be defined in terms of its roles (for a context), while the state of a role is defined in terms of its filling role and/or property values. In Perspectives we can write an _expression_ with some truth (Boolean) value to define a state.
+
+[quote]
+We do not explain expressions in this text in detail. In short, an expression can be some comparison whose left and right terms trace paths through the web of contexts, roles and properties. 
+
+Here is an example:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		user Guest
+			property FirstName (String)
+			property Accept (Boolean)
+			state Accepted = Accept
+				on entry
+					notify Organizer
+						“{FirstName} has accepted.”
+		user Organizer
+----
+
+The state declaration line shows that role state Accepted is simply determined by the value of the Boolean property Accept. As soon as the end user playing the Guest role sets that property to true (e.g. by ticking a box in the invitation screen), the Guest role _enters_ the state Accepted, or _transitions_ to that state.
+
+But what was the previous state of Guest? By default, each context or role is in its resting, or _Root,_ state. So by ticking the box, role Guest transitions from Root state to Accepted state.
+
+Let’s do some lexical analysis. notify Organizer is our lexical position of interest. What is the state transition it applies to? Following the nested scopes upward, we encounter an on entry line. This specifies a transition type (there is only one alternative: on exit). But entry of what state? Continuing our exploration of nested scopes upward, we encounter the state type declaration line for Accepted. Here’s another rule: in the body of a state type definition, that state is the _current state_. This completes our quest: notify Organizer applies to entering state Accepted.
+
+A little more on the nature of notifications. In the example above, we might be tempted to notify the Organizer with the text “I will come” rather than “X has accepted.”. After all, it is the Guest who accepts and this could be his personal message to the Organizer.
+
+But a notification is not a message from one user to another. It is more like an act of observation by the notified user. The difference is subtle: users should be observant and note what happens to contexts they play a role in. The notification mechanism merely aids them in actually noting that some changes have occurred. It is not a _conversation_ mechanism; we have other means for that.
+
+[quote]
+This is not yet so at the time of writing, but will be added in a future release.
+
+== More on states transitions; automatic effects
+
+Life is full of repetitious tasks. Automation can take care of them and Perspectives is no exception. But when we make something happen automatically using Perspectives, it will always be _delegated by some user role_. Here we mean by ‘something happens’ that the information recorded in terms of contexts, roles and their properties, changes; in other words, that the state (of some context or role) changes.
+
+So to make this very clear: state changes are always traceable to some (exactly one!) end user.
+
+Let’s consider a birthday party. On entering the Root state of the Party (which happens as we create it), we’ll create a role PartyPig (to be filled later by a person). This is the model:
+
+[source, perspectives]
+----
+domain Parties
+	case MyParties
+		user Organizer
+			perspective on Parties
+				only CreateAndFill
+		context Parties filledBy BirthDayParty
+			on entry
+				do for Organizer
+					createRole PartyPig in binding >> context
+	case BirthDayParty
+		user PartyPig
+----
+
+The first thing to note is that all birthday parties (all instances of BirthDayParty) are embedded in the context MyParties. The context role Parties holds them. The user role Organiser can create a new one and fill it automatically with an empty embedded context (an instance of BirthDayParty) as well, due to the role verb CreateAndFill.
+
+[quote]
+This is the _only_ way we can create contexts. Thus, each context is always embedded through a context role in some other context. The role verb CreateAndFill governs this.
+
+But this context is created empty and we always want to have an instance of the PartyPig role in it. This is where the on entry comes in. We then automatically create a role PartyPig, an automated task delegated by the Organizer user role.
+
+You will notice the clause in binding >> context. It traces a path from the new Parties role instance (the current object) to the new embedded BirthDayParty context that it is filled with. This is where we create the new instance of the role PartyPig.
+
+[quote]
+Notice that the current object as we’ve defined it above is actually available as the value of the variable origin in expressions.
+
+We might have written this model like this:
+
+[source, perspectives]
+----
+domain Parties
+	case MyParties
+		user Organizer
+			perspective on Parties
+				only CreateAndFill
+				on entry of object state
+					do
+						createRole PartyPig in binding >> context
+		context Parties filledBy BirthDayParty
+	case BirthDayParty
+		user PartyPig
+----
+
+There is no difference in meaning; just in the way we express it.
+
+By now you will have inferred that the line do for Organizer sets the current subject to Organiser. But why do we write on entry of object state and not just on entry, like we did in the first formulation?
+
+This has to do with the notion of current state. We’ve seen that in the body of a state definition, that state is the current state. But what is the state outside of such scopes?
+
+By construction, in the scope of a context definition, the current state is the Root state of that context. Similarly, in the scope of a role definition, the current state is the Root state of that role. Finally, we also have in state expressions that, unsurprisingly, set the current state.
+
+So in our second formulation of the model, the current state in the lexical position at the start of the line on entry of object state is the Root state of the [.underline]#Organizer# role. But we obviously do not want the automatic effect to take place on creating an instance of the Organizer role – it should happen when we create an instance of the [.underline]#Parties# role! This is what on entry of object state does for us: it sets the current state that the on entry applies to, to the Root state of the current object. And this happens to be Parties (it is the first enclosing scope that sets the current object).
+
+Looking back to the first formulation, we can understand why on entry works. The current state at this lexical position is given by the declaration context Parties – and thus is the Root state of Parties.
+
+There are a lot of ways to set the current state. Summing up:
+
+[arabic]
+. A state definition sets the current state for its body.
+
+[quote]
+In all rules we list below, ‘setting the state’ holds for the lexical scope following the declaration or clause lines.
+
+. A context definition sets the current state to the Root state of that context.
+. A role definition sets the current state to the Root state of that role.
+. The in state X clause sets the current state to its substate X. When of and a state type (object, subject, context) is specified, the current state is set to the substate X of the current object, current subject or current context respectively.
+. The on entry and on exit clauses do by themselves not change the current state, but specify a state transition for the current state.
+. The on entry and on exit clauses can be augmented with three parts:
+[loweralpha]
+.. of object state, optionally extended with a state name. It sets the current state to the Root state (or the named state) of the current object;
+.. of subject state, idem, for the current subject;
+.. of context state, idem, for the current context.
+
+These definitions and clauses give us full control of specifying the conditions under which something may happen automatically, in various ways.
+
+[quote]
+In case you wonder why perspective on does not set the current state, see the paragraph Why _perspective sets no state_. 
+
+Some examples:
+
+[source, perspectives]
+----
+	on entry
+	on entry of object state
+	on entry of object state Published
+	in state Published
+	in object state Published
+	in context state Published
+----
+
+== Perspective and state
+
+A user role might have different perspectives in various states. Let’s revisit our first example:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		thing Wishes
+		user Guest
+			perspective on Wishes
+				all roleverbs
+----
+
+What is the current state in the lexical position perspective on Wishes? Its narrowest enclosing state giving scope is the body of the user Guest definition, so it is the Root state of Guest. The implication is that this perspective on Wishes is always valid.
+
+Why always? Would Guest not lose the perspective on the very first state transition? No, because whatever state Guest would transition to, it _must_ be a substate of its Root state. This means that Guest then would be in both the substate and the Root state. In other words, perspectives for the Root state are always valid.
+
+In contrast, in this model:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		thing Wishes
+		user Guest
+			property Accept (Boolean)
+			state Accepted = Accept
+				perspective on Wishes
+					all roleverbs
+----
+
+Guest would only acquire a perspective on Wishes in state Accepted. That is, the state Accepted of the role Guest.
+
+We might call this _subject state_: the perspective depends on the state of the subject. It is also possible to define a perspective dependent on object state:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		thing Wishes
+			property Finished (Boolean)
+			state Published = Finished
+		user Guest
+			in object state Published
+				perspective on Wishes
+					all roleverbs
+----
+
+Now Guest can only see the Wishes when they are published. The perspective no longer depends on the state of Guest.
+
+As of yet, we cannot make a perspective dependent on both object and subject state.
+
+Obviously, we can also define a perspective to be valid in some context state. That means, in this case, that we can actually make the perspective depend on both object and subject state:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		thing Wishes
+			property Finished (Boolean)
+			state Published = Finished
+		user Guest (Relational)
+			property Accept (Boolean)
+			state Accepted = Accept
+				state WishesPublished = context >> Wishes >> Finished
+					perspective on Wishes
+						all roleverbs
+----
+
+Subject role state Accepted now has a substate called WishesPublished. Its definition depends on the same property Finished of role Wishes as the Published state of Wishes itself (but we need a path via the context to reach it). So, whenever Wishes transitions to Published, a Guest user role instance in state Accepted will transition to its substate WishesPublished and thus be in both states at the same time. So we succeed in mimicking the effect of making the perspective depend on both object and subject state.
+
+This works, however, only because Wishes is a _functional_ role (roles are by default functional: only by adding the qualifier Relational (in parentheses) we can make it have more than one instance). Obviously, Guest is not a functional role and this means we cannot mirror this solution by reaching out from the role Wishes:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		thing Wishes (Functional)
+			property Finished (Boolean)
+			state Published = Finished
+				state GuestAccepted = context >> Guest >> Accept
+					perspective for Guest
+						all roleverbs
+		user Guest (Relational)
+			property Accept (Boolean)
+			state Accepted = Accept
+----
+
+Look at the declaration of GuestAccepted: exactly what Guest are we talking about? The expression context >> Guest >> Accept will return as many Boolean values as there are Guests. As a matter of fact, the Perspectives compiler will reject this state definition because the expression is not functional (can result in more than one value).
+
+Summing up: only as long as at least one of subject and object are functional, can we mimic the effect of making a perspective depend on both object and subject state.
+
+== About expressions and variables
+
+Expressions can occur in six different positions in a Perspectives source text (illustrated in the next paragraph). An expression is like a function, applied to either a role instance or a context instance. Until now we’ve glossed over the question: to what instance is an expression applied, in execution time? The next paragraph is devoted to answering that question, but first we turn our attention to a number of _standard variables._ These variables take on a single value in runtime.
+
+For convenience, we can use in any expression the standard variable origin. Its runtime value is always the context- or role instance that the expression is applied to. The name ‘origin’ reflects the path-like character of an expression: you can trace it from context to role and vice versa, through the network of types of your model. Runtime, these are paths laid out through the network of connected instances. Below we will show how you can determine the type of origin from the model source text. It will turn out to be either the _current context_, _current subject_, or _current object_.
+
+Furthermore, we can always include the standard variable currentcontext in an expression. It’s type is the _current context_ as we’ve used the concept above, in the lexical analysis of source texts.
+
+In an action and an automatic action delegated by some user role, we can use the standard variable currentactor. It’s type is, unsurprisingly, the _current subject_ of lexical analysis.
+
+Finally, in a notify construct we can use the standard variable notifieduser that, again, has the _current subject_ type.
+
+=== What expressions are applied to
+
+==== The definition of a calculated role
+
+Given this model:
+
+[source, perspectives]
+----
+case C
+  role R = <expression>
+----
+
+<expression> is applied to the _current context_, which is an instance of C. The same holds for the other types of context (domain, party, activity). The value of origin is that same instance, and so is the value of currentcontext. Invariant: currentcontext == origin.
+
+==== The definition of a calculated property
+
+Given this model:
+
+[source, perspectives]
+----
+case C
+  thing R
+    property P = <expression>
+----
+
+
+<expression> is applied to the _current object_, which is an instance of R. The same holds for the other role types (context, external and user). The value of origin is that same instance, and the value of currentcontext is an instance of C. Invariant: currentcontext == origin >> context. NB: a (calculated) property is always embedded directly in the body of an enumerated role.
+
+==== The condition of a context state
+
+Given this model:
+
+[source, perspectives]
+----
+case C
+  state S = <expression>
+----
+
+<expression> is applied to the _current context_, which is an instance of C. The same holds for the other types of context (domain, party, activity). The value of origin is that same instance, and so is the value of currentcontext. Invariant: currentcontext == origin.
+
+==== The condition of a role state
+
+Given this model:
+
+[source, perspectives]
+----
+case C
+  thing R
+    state S = <expression>
+----
+
+<expression> is applied to the _current object_, which is an instance of R. The same holds for the other role types (context, external and user). The value of origin is that same instance, and the value of currentcontext is an instance of C. Invariant: currentcontext == origin >> context.
+
+==== The object of a perspective
+
+Given this model:
+
+[source, perspectives]
+----
+case C
+  user U
+    perspective on <expression>
+----
+
+<expression> is applied to the _current context_, which is an instance of C. The value of origin is that same instance, and so is the value of currentcontext. Invariant: currentcontext == origin.
+
+==== Expressions in do
+
+Given this model:
+
+[source, perspectives]
+----
+	case C
+		thing R
+			property SomeProperty
+		user U
+			perspective on R
+				on entry of object state
+					do
+						SomeProperty = <expression>
+----
+
+<expression> is applied to an instance of R. This requires some explanation. Why not to an instance of U?
+
+Let’s start with the question: what is the current state in the line that holds <expression>? Moving in from the outside: the body of case C has _context state_. But in the body of user U we have _subject state_. The body of on entry of object state changes that to the state of the current object. So what is the current object, at this position? It is determined by perspective on R, hence our <expression> is in the (root) state of role R: it is the _current state_ for that expression. As a consequence, <expression> is applied to the thing that can be in that state, hence it is applied to an instance of R.
+
+This turns out to be the way to find out, from analysis of the source text, the type of thing that an expression in the body of a do is applied to. Find the current state: the expression is applied to instances of the type that can be in that state.
+
+Because we have context state, subject state and object state, expressions in the body of do can be applied to contexts, user roles and other roles.
+
+origin consequently can be a context instance or a role instance.
+
+There is another standard variable available for use in expressions in a do: currentactor. It is an instance of the current user for that expression, which, in our example, is U.
+
+Finally, we have currentcontext: it is an instance of C.
+
+Consider this variation on the example model:
+
+[source, perspectives]
+----
+	case C
+		thing R
+			property SomeProperty
+		user U
+			perspective on R
+				on entry
+					do
+						SomeProperty = <expression>
+----
+
+(we’ve omitted the of object state after on entry). Consequently, the current state for <expression> is _user state_ and so <expression> will be applied to an instance of U. As U has no property SomeProperty, the system will complain about this and not accept your model.
+
+==== Expressions in do for a remote (calculated) perspective
+
+Given this model:
+
+[source, perspectives]
+----
+	case C1
+		thing R1
+			property SomeProperty
+		context C2S filledBy C2
+	case C2
+		user U
+			perspective on extern >> binder C2S >> context >> R1
+				on entry of object state
+					do
+						SomeProperty = <expression>
+----
+
+<expression> is applied to instances of C1$R1 (meaning: R1 in C1), so origin is an instance of R1. currentcontext is an instance of C2, currentactor is an instance of U, just as we’ve seen before. Now take a look at origin >> context. Does it equal currentcontext? No!
+
+This is new. In many of the examples above, we had the invariant currentcontext == origin >> context (and in the other cases, currentcontext == origin). But here, it is not so. This is exactly the meaning of a ‘remote perspective’: the user has a perspective on a role _outside_ the current context. For <expression>, this remote role is the origin.
+
+Having both origin and currentcontext, we can access both contexts in our expression if we need to: the current context from our lexical analysis (the context ‘as we see it’ surrounding the expression), and the context of the resource that the expression is applied to (the origin).
+
+==== Expressions in do for a remote (calculated) user
+
+Consider this model:
+
+[source, perspectives]
+----
+	case C1
+		user U1
+		context C2S filledBy C2
+	case C2
+		thing R
+			property SomeProperty
+		user U2 = extern >> binder C2S >> context >> U1
+			perspective on R
+				on entry of object state
+					do
+						SomeProperty = <expression>
+----
+
+Instead of having a remote object role, we now have a remote user role. This is reflected in the types and values of the standard variables: currentactor is an instance of C1$U1. currentactor >> context is not equal to currentcontext; the former is an instance of C1, the latter an instance of C2. origin is an instance of R.
+
+==== Expressions in action
+
+Given this model:
+
+[source, perspectives]
+----
+	case C
+		thing R
+			property SomeProperty
+		user U
+			perspective on R
+				action
+					SomeProperty = <expression>
+----
+
+Is <expression> applied to an instance of U, or an instance of R? As with do, we have to ask ourselves: what is the _current state_ for <expression>? Our state rules say that current state in the body of user is _subject state_ (perspective on changes the _current object_, but does not change the current state). Hence, <expression> is applied to an instance of U and the system complains that U does not have property SomeProperty.
+
+Now examine a variation on this model:
+
+[source, perspectives]
+----
+	case C
+		thing R
+			property SomeProperty
+		user U
+			perspective on R
+				in object state
+				action
+					SomeProperty = <expression>
+----
+
+The system accepts this, because we’ve changed the current state to object state and so <expression> is applied to the current object, which is an instance of R.
+
+In short: the rules for expressions in do apply to action as well, including the treatment of currentactor.
+
+==== Expressions in notify
+
+Given this model:
+
+[source, perspectives]
+----
+	case C
+		thing R
+			property SomeProperty
+			property Name
+			state S = exists Name and exists SomeProperty
+		user U
+			property Nickname
+			perspective on R
+				on entry of object state S
+					notify
+						“Hello {notifieduser >> Nickname}. instance {Name} of R now has value {SomeProperty}
+----
+
+The expressions in the notification are applied to an instance of R, so origin holds that instance. notifieduser is an instance of the type of the _current subject_, which is U since we did not specify otherwise (given another user role U1, we might have written notify U1). currentcontext will be an instance of C.
+
+In short: the rules for expressions in do apply to notify as well, but instead of currentactor we have notifieduser.
+
+=== Summing up: what expressions are applied to
+
+The table below summarises what expressions are applied to (and that resource is always available inside the expression as the origin variable). The standard variable currentcontext is also always available in each expression.
+
+[width="100%",cols="34%,33%,33%",options="header",]
+|===
+|Expressions in |Applied to |standard variables other than origin and currentcontext
+|The definition of a calculated role |Current context |
+|The definition of a calculated property |Current object |
+|The condition of a context state |Current context |
+|The condition of a role state |Current object |
+|The object of a perspective |Current context |
+|Expressions in do and action |The resource in current state |currentactor
+|Expressions in notify |The resource in current state |notifieduser
+|===
+
+=== Delegate to a functional user role only!
+
+We’ve seen that resources that expressions in action and in do are applied to, are determined by the same rules. Yet there is a difference between automated actions and actions that must be executed by hand. Automated actions are _delegated_ by a user role. Suppose that this role could have more than one instance (as specified with the keyword Relational). We then would have a situation in which multiple PDR installations would execute the same action and claim the authorship of the changes to ‘their’ user!
+
+Instead, we stipulate that the user role on whose behalf an action is executed automatically, must be _functional_. This obviously also holds for calculated user roles, but that may be less easy to see. Luckily, the system checks this for us and flags down the model if the calculation could result in more than one user instance.
+
+=== Why perspective sets no state
+
+You may have wondered why perspective on sets the current object, but does not change the current state. Consider this model:
+
+[source, perspectives]
+----
+domain SomeModel
+  case C
+      thing R
+			property SomeProperty (Boolean)
+      user U
+        perspective on R
+          action MyAction
+            SomeProperty = true
+----
+
+Its intended meaning seems clear: user U has an action called MyAction in her perspective on R. However, the system will raise an error to the effect that U does not have property SomeProperty. Let’s analyse why: the current state at the lexical position of MyAction is set by the user U declaration, so MyAction is _subject state_. Hence, the action holds for that state and will be applied to the current subject, being an instance of U. We can easily fix that:
+
+[source, perspectives]
+----
+domain ActionExample
+  case C
+      thing R
+			property SomeProperty (Boolean)
+      user U
+        perspective on R
+          in object state
+            action MyAction
+              SomeProperty = true
+----
+
+Now MyAction is in object state and will be applied to an instance of R. All is well.
+
+This seems a perfect argument to have perspective on change the current state as well. But then we would run into problems with this model:
+
+[source, perspectives]
+----
+domain Parties
+	case Party
+		thing Wishes
+		user Guest
+			perspective on Wishes
+				all roleverbs
+----
+
+The current state for the line all roleverbs would become object state, meaning that the perspective holds for the root state of Wishes rather than the root state of Guest. That is not very intuitive. As models will usually be a lot more about specifying perspectives than actions, we have decided to construct the language in favour of the former. Hence we must use in object state for an action in the ActionExample model.

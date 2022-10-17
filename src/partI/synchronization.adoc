@@ -1,0 +1,7 @@
+[desc="How changes to state are synchronized with peers."]
+== Synchronization
+
+include::Perspectives_across_context_boundaries.adoc[leveloffset=1]
+
+include::Query_Inversion.adoc[leveloffset=2]
+

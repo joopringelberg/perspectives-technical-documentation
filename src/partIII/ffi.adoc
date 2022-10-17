@@ -1,0 +1,4 @@
+[desc="Accessing foreign functions through libraries."]
+== Foreign Function Interface
+
+ffi ffi
