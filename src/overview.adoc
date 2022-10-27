@@ -1,4 +1,7 @@
 :stylesheet: ./adoc-colony.css
+// Uncomment this to generate pdf:
+// asciidoctor-pdf src/overview.adoc
+// :imagesdir: ../images/
 
 :sectnums:
 :sectnumlevels: 4
@@ -10,7 +13,7 @@
 = Perspectives Technical Documentation
 // Joop Ringelberg <joop.ringelberg@perspect.it>
 
-This is the documentation of the design of the Perspectives Language and the implementation of the Perspectives Distributed Runtime (PDR).
+This is the documentation of the design of the Perspectives Language and the implementation of the Perspectives Distributed Runtime (PDR). Alternatively, open the link:overview.pdf[PDF version] instead.
 
 include::introductionToDocs.adoc[]
 
