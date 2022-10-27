@@ -1,4 +1,6 @@
 [desc="Accessing foreign functions through libraries."]
-== Foreign Function Interface
+== Extensions
 
-ffi ffi
+include::External_Function_Interface.adoc[leveloffset=2]
+
+include::writing_an_ffi_module.adoc[leveloffset=2]

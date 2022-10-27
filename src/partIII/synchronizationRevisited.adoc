@@ -1,4 +1,22 @@
 [desc="Implementing synchronization."]
 == Synchronization revisited
 
-bla bla
+include::Synchronisation.adoc[leveloffset=2]
+
+include::Synchronisation_edge_cases.adoc[leveloffset=2]
+
+include::Sync_subnetworks_as_a_consequence_of_a_new_binding.adoc[leveloffset=2]
+
+include::Aspects_require_refinement_of_inverted_queries.adoc[leveloffset=2]
+
+include::Who_authors.adoc[leveloffset=2]
+
+include::Query_inversion_over_model_boundaries.adoc[leveloffset=2]
+
+include::Optimizing_inverted_query_application.adoc[leveloffset=2]
+
+// This text is not quite finished!
+// include::Filtering_inverted_queries.adoc[leveloffset=2]
+
+// This text is not quite finished!
+// include::Serialising_data_structures.adoc[leveloffset=2]

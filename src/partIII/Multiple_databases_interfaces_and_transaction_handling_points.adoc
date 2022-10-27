@@ -1,0 +1,154 @@
+[multipage-level=3]
+[desc="A single user might have several devices she wants to use InPlace with. In this chapter we discuss the intricacies involved in that for the distributed application the PDR is."]
+= Multiple databases and devices
+
+We can analyse the InPlace application in terms of three parts:
+
+* an interface (graphical, as it is, but not necessarily so),
+* a database
+* and a component that sits between the two.
+
+This latter component
+
+* receives instructions given by the end user through the interface on how to modify, delete or extend contexts and roles;
+* saves new versions of those contexts and roles to the database
+* compiles and sends transactions of deltas for each peer that should be informed about those changes. A _delta_ is an atomic change to a context or role; however, some deltas must be carried out together in order for the data to remain consistent, hence the notion of _Transaction_.
+
+In this text we focus on the question: can an end user be meaningfully supported by a constellation of more than one UI, database and middle component? This will concern mostly the transaction handling aspect of that component, so here we call it the _Transaction Handling Point_ or THP.
+
+[quote]
+The Perspectives Distributed Runtime is a THP; but a THP need not be a PDR, as we will see later.
+
+== A refresher: structural connections in Perspectives
+
+Before we delve into these subjects, let’s quickly recap some aspects of the representation of Perspectives data. To start with, there are only two entities: contexts and roles. They are connected in just two ways:
+
+[arabic]
+. Contexts have roles;
+. Roles fill other roles.
+
+However, because we want to traverse these connections efficiently in both directions, we represent each by two links:
+
+[arabic]
+. In a context, we point to the roles, and
+. a role contains a pointer to its context.
+. In a role, we point to the role that fills it, and
+. a role also contains pointers to roles that are filled by it.
+
+And that’s it! In this text we will speak of the _roles of a context_, the _context of a role_, the _filler of a role_ and the _filled roles of a role._
+
+== Multiple databases
+
+To prevent misconceptions, please remember that each user keeps his own stuff. That is, a database of entities _just contains the entities as seen by a single user!_ Their peers have a database, too, and they will contain their versions of the entities accessible to both.
+
+InPlace v0.7.0 stores all data in a single Couchdb instance on the local computer of the end user. What might be reasons for changing that? Here are three use cases:
+
+* InPlace-in-the-cloud: a user decides to store his data with a service at some endpoint on the internet, for reasons of availability, safety, whatever.
+* A home server, with more capacity than, say, a mobile phone.
+* The wish to store some entities, e.g. relating to a particular domain such as insurances, with a third party while keeping other data local.
+
+This requires a change in the nature of the links themselves. Currently, they merely _identify_ entities; but we need them to _locate_ entities. It is the change from an URI to an URL.
+
+To make it practical, more is required. A user needs safe and private access to endpoints that keep his data and that will require authentication and possibly encryption. This is all usual stuff; however, the THPs need to be able to authenticate and de- and encrypt on their users’ behalf.
+
+Furthermore, a remote database may be unavailable for some time. The THP should be able to handle this. This has repercussions for the current implementation because it is built on the assumption that an entity identifier can always immediately be exchanged for the representation of the identified entity and that would no longer be the case.
+
+== Linked and non-linked connections
+
+As stated above in _A refresher: structural connections in Perspectives_, each connection is represented by two links so we can traverse connections in both directions. We left unsaid that there is an asymmetry in numbers: a single context can have many role (instances), but each role instance has just a single context. Similarly, a single role is filled by just one other role, but each role can fill an unlimited other number of roles. So, the cardinality of each connection is 1 to n.
+
+There may be use cases where directly indexing (linking) all role instances in a context, or directly indexing all filled roles, becomes impractical. Consider, for example, a witnessing service where a single witness is involved in millions of financial transactions. Clearly, we should not require the PDR of this witness to load as a single entity these millions of references! Similarly, for the other kind of connection, think of a model repository where many thousands of users want to have a role in a particular model context, as end users that want to be notified of updates.
+
+Instead, we want to be able to represent some links with a _database query_. To find all roles filled by role X is conceptually straightforward and, indeed, it is the type of query that every database system is optimised for. We will call such links _Database Query Links_ (DQL).
+
+=== Accessing DQLs
+
+Traversing the connection between roles in the direction of the _filled roles_ would occur, in Perspectives, in the form of a Calculated role that has the keywords _filled by_ in its definition (a path query). As the typical use case for a DQL involves high volumes, it is desirable to limit the number of responses that come from the database. This is usually done by deploying two different techniques:
+
+* paging, i.e. retrieving a set of consecutive results on user demand;
+* filtering, i.e. just returning results that conform to some criterium
+
+or a combination of both.
+
+We can envision paging keywords as an extension of the Perspectives Query Language. Role properties would parameterize the paging query.
+
+Similarly, we can conceptualise a different compilation of the existing filter expression, where the criterium would translate to a query carried out on the server. This is a well-defined, albeit possibly complex technical extension of PQL.
+
+== Multiple Transaction Handling Points
+
+Two peers synchronise the representation of the state of entities located within the Perspectives Universe that falls in their respective horizons. Their Transaction Handling Points construct and process deltas and ship them in transactions.
+
+[quote]
+But again, note that synchronization does not imply they send copies of these resources to each other. They send deltas that deal with each other’s perspectives.
+
+A THP is also the place where bots execute actions on behalf of their users. Now reconsider the use case of witnessing. The actual actions that should be carried out by the witness lend themselves perfectly to bot handling. As a witnessing service grows, the bot should scale with it. Above a certain volume it will not be practical for the THP of the witness (the human) to handle all those transactions: the bot will compete for resources with the actions the human user wants to carry out himself.
+
+So here arises the wish to have some types of transactions to be handled by another processing unit: a THP dedicated to a few types of transactions. In other words: we want the witnessing bot to run on some server or in the cloud and not on the laptop of the witness himself!
+
+The PDR (as our only current THP implementation) looks up, for each delta, to what THP it should be sent. It finds that information with the User of the System and it finds this system user by following _filled by_ links, starting with the role in the context where the delta applies. In our example this would be a financial transaction, where the witness role would be filled by a ‘telescope’ of roles that bottoms out in the system user of the employee designated responsible for the service by his employer.
+
+To paint the picture in a little more detail, let’s assume that we have a company context (WeWitness), with Employee roles, with a WitnessEmployee role in the actual WitnessingDepartment, with WitnessContract contexts with a customer role and a Witness role. We then would have the following telescope:
+
+* Witness in FinancialTransaction
+* Witness in WitnessContract
+* WitnessEmployee role in the WitnessingDepartment
+* Employee role in WeWitness
+* User role in System.
+
+Conceptually it is simple to add THP properties to the WitnessEmployee role that will _shadow_ the THP properties in the User role. So when the PDR of a client looks up the THP properties starting from the FinancialTransaction, it will find the location of the THP that is run on WeWitness’s high volume servers. The transaction of deltas will be sent to that server.
+
+=== A THP that is not a PDR
+
+The service that executes the bot actions on behalf of the WitnessEmployee needs not be implemented as a full Perspectives Distributed Runtime. We know, by design, exactly what the form of the transactions is that it receives and that it must send. The actual processing is extremely simple. So we can write such a service in any language, as long as it accepts and produces the correct transactions for this use case.
+
+Such simplifications will bring great scaling benefits.
+
+=== A use case for Database Query Link
+
+As the number of financial transactions grows, it will soon be impractical to represent the filled roles link in the WitnessEmployee role with a list of all those filled Witness in FinancialTransaction roles. So here we have a perfect use case for a DQL.
+
+== Multiple User Interfaces
+
+Actually, the PDR v0.7.0 is fully prepared for multiple GUI’s. In the near future we will have a version that runs the PDR as a Web Worker in the browser. Pages on multiple tabs or windows will then be as many clients for that single THP.
+
+== Multiple devices
+
+Useful as multiple UI’s can be, in order to be able to use InPlace seamlessly on both laptops and mobiles, for example, another setup is required. One such setup would be to run a THP as a service and just run the clients locally. While this is perfectly defendable, scaling the service might become a challenge as a generic THP is quite resource-hungry.
+
+Another setup would be to run UI and THP locally but store data in a place that can be accessed from multiple devices. Again, a commercial service on the internet might be a solution; but so might be a home server.
+
+=== Database subscription service required
+
+However, this introduces another functional requirement for the database (and some extra handling by the THP). This is because InPlace operates according to a _what you see is what you have_ principle. To be more precise: the contexts and roles visible on screen are guaranteed to be a faithful representation of the state of that part of the Perspectives Universe.
+
+Now consider the situation where an end user enters, for example, an utterance in a chat, using his mobile phone. Were his laptop to show the same chat, his words would not appear automatically there, too. This is because the update of the GUI is driven by transactions. Let’s delve into this a little deeper.
+
+When chatting on his mobile, the end user clearly wants to receive his answers there – not on his laptop. We have seen above that we may specify different THP’s for various user roles, but in the end a transaction is sent to just one such THP. So the mobile should receive the chat-related transactions while the end user is on it – and that leaves the laptop in the dark.
+
+We can remedy that situation by requiring the database to offer a subscription service that provides the subscribing THP with a stream of modified, new and deleted entities. On receiving such a changed entity, a THP would compare the arriving entity with its existing version, work out the difference in terms of new deltas and then check its dependency administration to see if one of its GUI clients has subscribed to a query for which the delta is an assumption.
+
+So, to return to our example setup, the laptop would subscribe to the database and be informed of new utterances. As its GUI client has an active query regarding these utterances, the PDR would re-run the query as soon as the database sends a new one.
+
+=== What is the active THP?
+
+Notice that a new notion has crept into our discussion: that of a THP that can be the intended receiver of transactions or not, _based on the device the end user is handling_. This is a subtle notion and its implementation is not trivial. For what is ‘handling’? When two devices are simultaneously active, how should peers know where to send a transaction?
+
+There are no easy answers here. For the time being, we will satisfy ourself by a simple priority list, combined with a notion of being available or not. Each peer will come to send transactions to the same THP, based on this approach.
+
+Notice that while the priority list is stable and can suitable represented in Perspectives itself in terms of contexts and roles, this is not the case for availability. Preferably the channel we use for sending transactions would handle this issue(see <<State and Notification>> for a notion of _availability_ that could be useful for this issue).
+
+=== Analysis: why each transaction is handled only once
+
+Could the same transaction be handled by multiple THP’s? Executing a same delta a second time is an idempotent operation, so at first sight it seems harmless to have two THP’s handle the same transaction (but notice that storing the same value twice in a database need not be idempotent!). But changes can trigger bot rules and thereby change the Perspectives Universe again. Care is taken, in the design and implementation of the Perspectives language, to provide a clear and deterministic semantics to these operations. However, having multiple processors carry out the same process, interleaving the results in unpredictable order (due to varying transport times) probably really complicates these issues. And each THP will compile the same transactions and send them on to the relevant peers, where the process might trigger yet more consequences, etc.
+
+For that reason, we will require that just a single THP handles a particular transaction.
+
+== Modelling freedom
+
+The exploration above gives us considerable leeway for modelling, because we can see several techniques on the horizon that will make models practical that otherwise might seem wieldy and inefficient. The model repository is an example. The most straightforward way to describe the exchange and exploitation of models would give the modeller and the end user a role in some context that represents a particular model. That context would obviously also include a role for the model itself, in its various versions. We would further include some constructs to record end user payments for the model, etc.
+
+But this would quickly become a burden for the author of a popular model. His THP would become buried under thousands of end user in the role of client. Update information would have to spread to them, invoices, etc., in volumes that could grow into a problem for the modellers laptop.
+
+We now know that we can ‘offload’ such transaction handling to dedicated servers. This is exactly the business use case for repositories as a kind of app store, their raison d’ etre.
+
+In other words, by implementing the above features, we further separate the conceptual modelling of co-operation from issues of scaling and deployment.

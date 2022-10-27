@@ -1,0 +1,168 @@
+[desc="On public contexts and multiple storage locations."]
+= Universal Perspectives
+
+In this text we explore the notions of _universal perspective_ and _public context_. These turn out to be closely related to the subject of _multiple storage locations_ for Perspectives resources (context- and role instances).
+
+== Public context
+
+With Perspectives we recognise that various participants in a context may have a different view of the same role. Consequently, each of them keeps his or her own version of it on his or her own computer. Because the distributed runtime doesn't keep a central store of data, but instead sends updates of contexts and roles to those whom it will concern, only participants in a context will have access to data concerning its roles. This maximizes correct interpretation of data: not just anybody can see it. Thus, Perspectives is built for the fine-grained structure of society consisting of personal interactions.
+
+But society also knows public spaces. Political debate is carried out in public; the government works in public space; newspapers, television and radio make information available to the public, indeed, by 'publishing' it.
+
+Perspectives supports public spaces, too. For this we introduce the concept of a *universal perspective*. This is the perspective of a role that can be played by anyone; no restrictions apply (other than that one should have a computer with Perspectives on it to one's disposal). This implies that this role should be _calculated_: the calculation should work for every member of the public. By convention, we’ll call that role *Visitor*. If all participants share the same perspective on a role (or context), all of them can do with the same version. This allows us to store such entities in a _public store_. Someone wanting to access the information on such a role will have to fetch it from that public store.
+
+We call a context with a Visitor a *public context*.
+
+How do we find a public context? For this Perspectives relies on the Domain Name System (DNS) of the internet. Concisely, the DNS is a distributed system of internet servers that allows anyone to exchange a readable name for an internet address. Ipso facto, the readable name identifies a _location_ and, indeed, its technical name is a Universal Resource Locator or URL.
+
+Now most of us are familiar with URLs: using a web browser program with access to the internet, we can retrieve a document 'from' the URL. Actually, we retrieve it from some internet-connected server: both the server and the document are identified by (different parts of) the URL.
+
+== URLS
+
+Two parts of the anatomy of a URL are of interest to our purposes: the *authority* and the *path*. For example, in: https://www.nlnet.nl/somedocument.html, "www.nlnet.nl" is the authority, while "somedocument.nl" is the (very simple) path. The authority is built from simple strings of characters separated by dots. Each part is called a domain. The rightmost part - nl - is the top domain, while the parts to its left are subdomains, successively deeper nested. So "nlnet.nl" is a subdomain of the top domain reserved for the Netherlands.
+
+What about the "www" part? Well part of the nlnet.nl domain is called "www". So www is a subdomain of nlnet.nl This sits uneasily with our intuition of the world wide web as a kind of 'umbrella' over all websites. Actually, technically, all domains that take part in the world wide web, address _part of themselves_ - one of their subdomains - with the name "www". So really, all those domains have a bit of the world wide web _that they happen to call by the same subdomain name_. The world wide web is a convention, rather than a technical unit.
+
+The _path_ is used to identify resources in a particular subdomain. In our example the path is just the identifier of a document. However, we may construct a path of segments separated by slashes, for example: /foundation/anotherdocument.html. We can interpret "foundation" as a named collection of documents, or, in other words, as a _folder_ holding documents and other folders.
+
+Having studied relevant parts of URLs we can now explore how to use them in Perspectives.
+
+== Identifying public contexts
+
+First we notice that the world wide web usually is understood as a system for locating resources, like documents or programs. In Perspectives, the main concepts are on a different level of abstraction: in presenting it, we take care to avoid concepts like document, message and information. Context and role are not just different names for information objects, even if, when we discuss the operation of the distributed runtime, we recognise that instances of both are represented as documents.
+
+In Perspectives, the end user usually visits a context by navigating to it from another context. If alternatives exist - for example, a list of chats - these will be presented with some description entered by the user himself. The _identification_ of a document representing a context, however, consists of a GUID and is hidden from his view.
+
+Navigating will have to start somewhere and for that the end user can choose from a small number of readable names that also _identify_ a context. These names are defined in Perspectives models. Now, an observant reader might object that a conflict must exist between
+
+* each end user having a unique version of a context, and
+* models giving a universal context identification.
+
+[quote]
+Two users would both have a System context and they would both create a User role in it. But these roles *must* be different, hence the System contexts must be different, hence they must have different names. I will call the building _you_ live in, _your_ house.
+
+This conflict is solved by a system of _indexed names_. A prime example of an indexed name is "Home". In the abstract, it means the same for everyone; but concretely, each of us points to a different dwelling (except, of course, those living together at the same address). So each end user enters the same indexed name, but, under water, these are exchanged for unique identifiers _by each installation of the distributed runtime_.
+
+Back to public spaces. A public context, being the same for everyone, can be identified by the same name for everybody too. We don't need to switch them for unique private names, like with indexed names. This is how we use the DNS in Perspectives. *Domain names identify public contexts*. We call such a context a *named public context*; we call the URL a Uniquely Identifying Readable Name (UIRN).
+
+Suppose the NLnet organisation wants to provide a public context. What domain name should it choose? Here we would like to introduce a convention. Just like the "www" subdomain holds resources to be shared over the internet, we would like to propose to keep public contexts and roles in a subdomain, too. We'll call it the *context web* and abbreviate it with 'cw'. Hence, NLnet should call its public context `http(s)://cw.nlnet.nl`.
+
+However, given that InPlace is served from a secure domain, Cross Origin Resource Sharing (CORS) requires that we should use the https scheme rather than http. In other words, a server operator would be required to obtain security certificates for the "cw" subdomain (and in what follows we'll see that quite a few more are required). This is a practical (financial) obstacle. For that reason we'll introduce another convention. Instead of using a subdomain, we'll introduce a convention for a particular way to create _path names_. To continue the example, NLnet would store its public contexts at the location `https://nlnet.nl/cw_nlnet_nl/`. See <<Model description: a public context>> for an extended example.
+
+=== How does it look?
+
+So, given the InPlace application, how does the end user navigate to a public context? Actually, she can just enter the UIRN in the browser address bar. Again, by convention, the web server monitoring the cw subdomain will _redirect_ the browser to InPlace, providing the UIRN as a parameter: https://inplace.works?https://nlnet.nl/cw_nlnet_nl/some-context.json (notice that the characters :, / and ? should be _encoded_ in order not to confuse the internet servers). As a consequence, the InPlace program will run in the tab and it will use the parameter to access the document some-context.json in the public storage .
+
+This means that an ordinary webpage can hold a url to a public context. Clicking it will navigate into the context web!
+
+=== Model descriptions: Manifest
+
+A model is a collection of types. A _domeinfile_ is a description of these types in a form that can be used without modification by the distributed runtime. We identify models by a URN in the model scheme (see <<Type and Resource Identifiers>>). Intuitively: in the model scheme we use the DNS to maintain unique model names. A model is _described_ by a public context whose URL we derive from the model identifier.
+
+For example: the System model, created by Perspect BV io, has the URN model://perspectives.domains/System. From it we derive the URL of its model description: https://perspectives.domains/cw_perspectives_domains/System.json.
+
+So some public contexts are the description of a model; others are not. 
+
+== Multiple storage locations
+
+The concept of public contexts stored in a publicly accessible location - a *public store* - presents us with the notion of multiple locations where the distributed runtime can store contexts and roles. In versions of the system up to v0.11.0 all resources went into a single local store. As we introduce the notion of multiple stores, this local store will become the *default private store*. The current code base realises this through Pouchdb, where the default private store goes by the identifying name "\{systemIdentifier}_entities" (where \{systemIdentifier} is replaced by the unique system identifier for the installation).
+
+This store may be based in the IndexedDB of the browser, or it may be a database of a Couchdb installation anywhere.
+
+Multiple stores present us with the following questions:
+
+[arabic]
+. How should the runtime decide where to store a given resource, or where to retrieve it from?
+. Where do we keep information on the various stores that are not the default private store?
+[loweralpha]
+.. what is their name
+.. what is their location
+.. where do we store credentials, if necessary?
+. Should it be possible for the end user to transfer resources _after their creation_ to a different store, i.e. from store to store?
+
+=== Where a new resource should be stored
+
+By default, a new resource is stored in the default private store. However, the end user has functionality to determine, for each context or role type, the store of its instances. This requires a Perspectives model and a user interface.
+
+Hence, on creating a new resource, we should use type reflection to look up the store where it should go.
+
+The author of a model may specify that instances of a type should be stored in a public location. But the author cannot specify a _specific location_ - just that it be public. In fact, the end user is ultimately in control. He will have to specify a location for types that are deemed public - but as it is up to him to choose a location, he can choose a private storage location, too (in fact, we base a best practice on that possibility below).
+
+To specify that instances of a type should be stored in public space, the type definition should include the keyword public.
+
+=== Where a resource should be retrieved from
+
+Currently, resources are identified by a string of the form "model:User$\{GUID}". The resources identified by this form *must* be stored in the default private store. Each store must have a symbolic unique name, associated with an address that can be interpreted by Pouchdb. We will interpret "model:User" as the symbolic name of the default private store. We will prepend this name to the GUID identifying a resource, separated with a $ sign from it. So, for example, if MyOtherPrivateStore is another store that I keep some of my contexts and roles in, a resource identified by the form `{GUID}|MyOtherPrivateStore` will be stored in MyOtherPrivateStore.
+
+=== Saving resources
+
+Consequently, the identifier of a resource holds the name of its storage. This is a symbolic name. The runtime has a lookup table, kept in a runtime state, to translate that symbolic name to a physical location. Because we rely on Pouchdb, any location that is not IndexedDB should be identified by a URL.
+
+=== Authenticating
+
+The runtime core assumes it has a session (is authenticated) with the store it is about to retrieve a resource from, or store into. If not, it authenticates. Currently (version v0.11.0) it uses credentials stored in Perspectives State. To accommodate multiple private stores, it will separate the store name from the resource identifier, look up the store’s credentials (always stored in default private store!) and authenticate before retrying.
+
+As a consequence, we put the credentials for the default private store in Perspectives State at the start of the session. For the browser db, no credentials are needed; for a Couchdb installation, the user must enter them on starting a session.
+
+=== Moving resources
+
+The end user might decide that, after having stored instances of a type in the default local store for some time, to move them to another location. As location is encoded in the identifier, this requires us to rename the resources. This may be an expensive operation in terms of processing power, memory and storage access operations:
+
+* each resource must be moved to a different location under a different name;
+* each occurrence of the resource identifier must be replaced by the new name. This applies to
+** context names of role instances;
+** role instance references in contexts;
+** role instance references in bindings;
+** role instance references in inverse bindings.
+
+This requires us to retrieve all instances of a given type from a database.
+
+=== Moving an entire store
+
+Because of the dereference of the symbolic name of a storage to its address, we can move the contents of an entire storage location to another storage location _without changing resource identifiers_. Furthermore, the function from symbolic name to address need not be a bijection. Hence, we may create two or more symbolic names for the same storage address.
+
+This gives rise to a good (best) practice. It may, for example, be a good idea to store all one's financial stuff in the same location. Start out with an alias for the default public store, e.g. FIN. When the time comes, move the entire store to some safe storage location at relatively low resource cost, by associating FIN with a new storage address.
+
+In case of a store that multiple symbolic names map to, when we move one of them, say X, we have to pick _only_ the instances of the types that were saved to X!
+
+== Authoring public contexts and roles
+
+To author a context (instance) that will be available to the public, requires three things:
+
+* a storage location on the internet that you have writing rights for and that interprets the HTTP verbs in the way Couchdb does;
+* that you associate the type of the instance you want to create with this storage;
+* the ability to enter the identifier of the context through the user interface.
+
+That's all. Just create the context in whatever way the author of the model you're using, has made available. After creating it, each modification will be published automatically.
+
+This requires some planning. As soon as you put up your contexts and roles, they are available. That may not be prudent; you may want some time for yourself to edit your contexts and roles until you're satisfied with them. This is where the best practice described above comes in handy. Associate your types with a symbolic name that represents a place to work, and have it point to your default private store. Then, when the time comes to publish, point it to its definite public location.
+
+Notice that while this gives you some breathing space, it is a trick that cannot be repeated for more instances of the same type after publishing the first instances. Should you publish something like a periodical, you'll have to find another way to temporarily bar the public from work in progress. A good way is to prevent the public from navigating from accessible public contexts to the stuff you're authoring, until you're ready. In effect, they are then hidden from the public eye (As you are creating a new public context, by remembering its public name you yourself can revisit it before publication!).
+
+=== Co-authoring
+
+How many authors may a public context (or role) have? It's in the model authors hands, of course, depending on the perspectives (s)he creates. It may be prudent to limit the authors of a public context, preferably to one. Various authors can overwrite each other’s changes and there is no arbiter, neither will authors be notified of changes made by other authors. In other words, it would be a very rough authoring experience.
+
+=== State
+
+Contexts and roles have state. A model may prescribe automatic actions and notifications on state change. State change occurs on creating a context or role, and when they are modified. All this means that state can only be useful for the _authors_ of a public context. Assuming that the universal perspective does not allow for changes, those playing that role will never benefit from notifications or automatic actions on their behalf.
+
+== Actions to create private contexts and roles from public ones
+
+A public context can be useful in the same way that a static web page can be useful. But Perspectives is not primarily a system to publish information; it is a system to co-operate. If the Visitor cannot change a public context, how can she ever enter in a co-operation starting from such a context?
+
+It turns out that Perspectives already has a provision for this situation, in the form of the _unlinked role_. An unlinked role instance refers to its context, but the context has no pointer to the role instances of an unlinked role.
+
+Hence, a Visitor can create, for example, an instance of an unlinked Context role. The context role, the external role of the context and the context itself are all stored in private store. By providing a role for the author of the public context - let's call him Admin - in that new context, the distributed runtime of the Visitor will send deltas to the Admin so he can construct the new roles and context, too. This way, Visitor and Admin participate in a private context that was created from the public context. The author of the public context can have a perspective on the context role; his runtime will retrieve the instances by database query.
+
+This is a good general scheme for subscription, where a Visitor explores public contexts and decides to subscribe by creating a (private) contract context between herself and the Admin. Creating the private instances may be done by providing the Visitor with an Action that can be accessed through the GUI.
+
+How does the Visitor (re)visit his Contract? To navigate to it from the public context would require a perspective for him on Contracts. But this would disclose other contracts, too, a privacy breach. Instead, the Contract is modelled as a context with an IndexedName. Consequently, he can visit it by entering that name (it may be given on the public context page; indeed, after it has been constructed, a link may appear). Remember that, under water, the runtime creates a unique identifier for an indexed name
+
+[quote]
+The Admin will receive the unique name; not the indexed name!
+Notice that the Visitor can only create a single contract, using this mechanism (there is just one indexed name).
+
+An alternative to indexed names comes into being as soon as we make filters work on inverted queries. We can then give the Visitor a perspective on the contracts filtered with the criterium that he himself plays a role in it. The PDR of the Admin would apply this filter on the inverted query and this would cause a contract to be sent to just the relevant Visitor (the version that exists currently, v0.11.0, does not support inverted query filtering).
+
+In a different approach, we would allow the Visitor create a new user role – let’s call it an Account- with more perspectives. Usually, restrictions on Accounts apply. Because the Account will be an enumerated role, an end user visiting a context in which (s)he plays the Account role, will use the perspectives that come with that role (because enumerated user roles have precedence over calculated ones, when the client establishes the perspective for its end user). See the text _The Body-with-Account Pattern_ for more details.

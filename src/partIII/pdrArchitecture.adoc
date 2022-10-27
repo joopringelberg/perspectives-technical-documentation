@@ -1,4 +1,14 @@
 [desc="The architecture of the Perspectives Distributed Runtime"]
 == PDR architecture
 
-The PDR ...
+include::A_Transport_Layer_for_the_PDR.adoc[leveloffset=2]
+
+include::Stomp_for_InPlace.adoc[leveloffset=2]
+
+include::Configuring_Couchdb_for_Inplace_8.adoc[leveloffset=2]
+
+include::Multiple_databases_interfaces_and_transaction_handling_points.adoc[leveloffset=2]
+
+include::Error_handling_in_the_PDR.adoc[leveloffset=2]
+
+include::User_and_System_Identifier.adoc[leveloffset=2]

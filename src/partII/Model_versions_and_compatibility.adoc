@@ -1,4 +1,3 @@
-:sectnumlevels: 4
 [multipage-level=3]
 [desc="A model source text is changed over time by its author. This can be compared to 'schema evolution' in database systems. In this chapter we explore what problems arise for existing data when a model changes. We explore all kinds of modifications."]
 = Model Versions and Compatibility

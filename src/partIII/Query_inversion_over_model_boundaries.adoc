@@ -1,0 +1,70 @@
+[desc="An author may reach out, through a query, to a role type defined in an imported model. Consequently, an inverted query must start at that type - but the author may well have no control over that model."]
+= Query Inversion over Model Boundaries
+
+We use the technique of query inversion for a number of reasons (see the texts _Perspectives across context boundaries_, _Query Inversion_, and _Perspectives on Bindings_). This text presents yet another facet of this technique.
+
+A model is a collection of types. Models build on other models, for example because a Role dom2:B gives dom1:B as its possible binding). We can envision the Perspectives type space as an unbroken network of types. However, this network is segmented in parts that constitute the models.
+
+Now a query, as a path through type space, may cross boundaries between models. This is not a problem: a query from model X that extends into model Y merely means that X depends on Y.
+
+A problem arises, however, when we invert that query. The inversion starts in Y! And the modeller of X may well not be the author of Y; he has no jurisdiction in the domain Y.
+
+So we may have numerous loose ends on our hands. If we leave them dangling, many things go wrong: for example, changes in instances whose types are in Y will not be propagated to users that are defined in X.
+
+This text describes a solution.
+
+== Alternatives
+
+There are actually three viable alternative approaches to solving this problem. All depend on storing the loose ends with the model.
+
+[arabic]
+. Whenever we change something, we might check all models to see if one or more loose ends apply to that change.
+. Alternatively, when we start a session, we may run through all models and distribute the loose ends over the other models, in memory.
+. For a more durable solution we would apply loose ends to all models _on taking a model in use._ Notice that we would store the enriched models locally, in the users’ own model database.
+
+From 1 to 3, the solutions cost less time for the end user. However, 3 requires us to undo the changes if the user ditches a model. Being able to do so would also give us the opportunity to update a model.
+
+We’ve implemented the last solution.
+
+== Design
+
+The first question is: how do we represent the loose ends? We select a representation for swift application in end user time. This will require more model compile time, but that is ok.
+
+We organise the loose ends by model, first, so we can apply a whole bunch of them efficiently to a given model.
+
+Next, we observe that we have to distribute the inverted queries over five collections:
+
+* onContextDelta_context
+* onContextDelta_role
+* onRoleDelta_binding
+* onRoleDelta_binder
+* onPropertyDelta.
+
+We therefore create a Sum data type that reflects those collections:
+
+[code]
+----
+data InvertedQueryCollection = OnContextDelta_context (Array IQuery) |
+  OnContextDelta_role (Array IQuery) |
+  OnRoleDelta_binding (Array IQuery) |
+  OnRoleDelta_binder (Array IQuery) |
+  OnPropertyDelta (Array IQuery)
+----
+
+Here, the IQuery type is a Tuple, really, of the string representation of the type that the InvertedQuery should be attached to, and the InvertedQuery itself.
+
+[code]
+----
+type IQuery = Tuple String InvertedQuery
+----
+
+Finally we can put these together in a data type for the loose ends:
+
+[code]
+----
+type LooseEnds = Object InvertedQueryCollection
+----
+
+and here the indices are the (string) names of the models that the loose ends should be distributed over.
+
+These data types allow us to iterate, first, over the models that should be updated; then we do, per IQuery, a case analysis to decide what member of the Role (or Property) we should add to; and finally we find the actual type to modify from the first element of the IQuery itself.

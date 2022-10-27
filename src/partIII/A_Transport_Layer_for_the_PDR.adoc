@@ -1,0 +1,108 @@
+[desc="In which we discuss the design decisions with regard to sending transactions to peer installations."]
+= A Transport Layer for the PDR
+
+The Perspectives Distributed Runtime (PDR) interprets models in the Perspectives Language for clients that display the current state of the Perspectives Universe to a particular end user (that part of the Universe that falls within his _horizon_). It also enables them to change that state. The Perspectives Universe is persisted as data saved on disk in an extremely distributed way – each user keeps his own stuff. Because users’ horizons overlap, their data collections overlap, too. Because of the overlap, the PDR has to _synchronise_ state with the PDR’s of relevant peers. This synchronisation – considered on a technical level – necessitates the exchange of _deltas_ to the state, in collections called _Transactions_. Usually, the PDR’s of various end users operate on different computers, connected to each other on the internet. So an important architectural decision concerns the _transport protocol and mechanism_ to use for exchanging Transactions.
+
+In this text, we report on an exploration of the alternatives and the roadmap we follow to connect PDR instances.
+
+Before we start, we want to point out that Perspectives can be considered to be distributed on the _application level_ without necessarily having to rely on a distributed transport layer. Having written that, ‘application level’ is somewhat inappropriate for Perspectives, as we have no clear notion of application. Usually an application is considered to be a functional unit of deployment with a clearly defined collection of data. This does not apply in a clear way to Perspectives. Nevertheless we want to make that distinction because – spoiler alert! – we initially choose for a Transport Layer that relies on a client-server model. This does not, in any way, compromise the distributed character of the PDR on the application level.
+
+== The problem to be solved
+
+PDR’s, considered as nodes in a network, cannot be expected to be online all the time. They are end user devices! Moreover, the network itself cannot be expected to be 100% reliable – especially not so for mobile devices.
+
+Nevertheless, a Transaction sent must arrive at its destination (to avoid misunderstanding: each Transaction is destined for exactly one other PDR). We cannot solve this problem on either the sender’s node or the receiver’s node. Even while the sender might notice that the Transaction it sent hasn’t arrived, saving it to be sent for a later time is not a full solution. It may happen that sender and receiver are never online at the same time!
+
+We would like to solve this problem in the transport layer itself.
+
+== Roadmap: distributed or not?
+
+There is no doubt that we want, in the end, to build the PDR on a fully distributed transport layer. This would probably be a mechanism that connects each peer to each other peer on the level of TCP/IP. However, as it is, the current state of the internet makes this no sinecure. The problem can be stated simply as a lack of directly addressable nodes: most of our devices (laptops, desktops, tablets and sometimes mobiles too) root in some private network, having an address that cannot be reached through the open internet. More technical, these devices are behind routers that assign local addresses to them and prohibit or sincerely hinder direct addressing from the other side of that router.
+
+To be able to proceed the PDR development without getting bogged down in this very technical problem, we will build the PDR on existing transport protocols and software instead. This does not preclude the other approach, leading to a full peer to peer stack as far down as we can push it; we merely postpone it to the future.
+
+== Current state
+
+At the time of writing, the PDR relies on Couchdb for transport. This consists of series of databases that we let Couchdb synchronise. In short:
+
+* Each pair of connected peers share a unique database, their _Channel_;
+* Both users have a local copy of that database;
+* There must be a server, accessible to both, that has a copy of that database, too.
+
+Thus, a Transaction is written by A into A’s copy of the Channel; replicated by Couchdb to the server copy; replicated by Couchdb to B’s copy, where it is picked up by B’s PDR. Actually, all local channel copies replicate to the _incoming post_ database for the local user and the PDR listens to the stream of events on that aggregate
+
+This is secure and robust and does the job. It is, however, not particularly fast. In the end, we abuse a database to function as a messaging mechanism. Of particular concern is the question of scalability. For n users, each with an average of m connections, n x m databases must be kept in synchronisation with remote copies. While Couchdb is built for database synchronisation, emulating a messaging system no doubt was not one of the use cases its designers had in mind.
+
+== Alternatives
+
+Messaging systems – or message queue systems – are available in many kinds. Two spring out as likely candidates for our purposes: XMPP and AMQP. Projected onto our needs, both do the job. However, they differ substantially from each other. XMPP was designed for human to human text message exchange. AMQP was designed for program to program message exchange, clearly closer to our situation. In what follows, we go into some detail of various quite different facets that have played a role in our decision making.
+
+=== Availability in the browser
+
+XMPP is readily available in the browser in the form of various browser-Javascript libraries. This is not so for AMQP. However, there is another protocol, STOMP, for which browser-Javascript libraries are available and that is ‘spoken’ by important AMQP implementations like RabbitMQ. STOMP is a simplification when compared to AMQP but rich enough for our purposes.
+
+So both systems can be used by a browser-based application.
+
+=== Who controls the infrastructure?
+
+Being motivated by the desire to prevent undue power that falls to server owners, we should be careful lest we lock our system in a monopolist on the level of the transport layer.
+
+Both protocols are public. AMQP (https://www.amqp.org/) is ratified by the IEEE; XMPP (https://xmpp.org/) is maintained by the XMPP Standards Foundation (also known as the XSF). Both protocols have been implemented as Open Source software (for AMQP there are quite a few robust implementations; for XMPP the de facto standard is Jabberd (https://jabberd2.org/).
+
+However, software is one thing, running the necessary infrastructure another and here XMPP and AMQP go different ways. XMPP is run mostly by volunteer organisations. There are quite a few and some of them have a good track record. Nevertheless, one cannot expect a guaranteed service level of these organisations. Moreover, Perspectives users would probably compare unfavourably with those who use the service for its intended purpose (chat): they would send messages at a far higher rate. Depending on these free services for the Perspectives Transport Layer might be unwise.
+
+[quote]
+For a curated list of awesome XMPP servers, libraries, software and resources, go to: https://github.com/bluszcz/awesome-xmpp. For a lost of public XMPP servers, see this (https://list.jabber.at/#:~:text=XMPP%20is%20a%20open%2C%20free,with%20users%20on%20other%20servers)[curated list].
+
+
+We have found two commercial XMPP service providers:
+
+[arabic]
+. https://tigase.net/xmpp-server
+. https://fluux.io
+
+For AMQP the situation is different. AMQP is used intensively for professional, industrial applications and hence there is a mature industry of service providers. An example (and market leader) is https://www.cloudamqp.com/.
+
+=== Who makes the choice for a service provider?
+
+Is it us, the designers of Perspectives, who choose a Transport Layer service provider for all future Perspectives users? Or can individual users choose different providers?
+
+We would like the situation to be like with email providers. Two end users, signing up with different providers, should be able to connect.
+
+This is guaranteed with XMPP: the system was designed with this use case in mind. Not so for AMQP. However, we will use AMQP much like a postbox service. Knowing the IP address (and postbox, or, in the parlance, queue identification) should be enough to deliver Transactions. So in theory, a PDR could drop Transactions with several providers. In practice, however, it would have to authenticate with each of these providers. This may prove to be a problem. We judge it not to be insurmountable.
+
+==== Why authenticate to drop a message?
+
+Let’s start out by stating that a PDR examines each Transaction, checking that it has indeed been signed by the claimed sender (authentication). It will further scrutinize all deltas, checking that they were performed by a user with the required role (authorization).
+
+The transport layer is not responsible for either authentication, nor authorization.
+
+However, we can imagine a kind of Denial of Service Attack where a malicious agent drops overwhelming numbers of Transactions on a single PDR. This is what authentication at the service provider would discourage (as such attacks could be traced to a known user).
+
+=== Transport Layer user administration
+
+If we rely on XMPP, we expect Perspectives end users to sign up to some XMPP provider and enter their credentials in the PDR, so it can use the account to send transactions.
+
+However, if we rely on AMQP, we must handle the signup process ourselves. As a matter of fact, we – Perspect IT - must act like a value-adding service provider ourselves. AMQP is not free and providers contract clients based on high volumes of transactions. A client of such a service provider must set up an ‘exchange’ and can then provision _its own customers_ to use the service.
+
+In terms of the Roadmap, we don’t have to start exploiting a service commercially straight away. A provider like CloudAMQP has a free plan that offers up to 100 queues, translating to 100 connected devices for Perspectives. Above that number, we’ll have to pay
+
+[quote]
+$19,- per month, to be exact, in 2020. This is not an insurmountable problem in the short run. However, it makes clear, too, that, in case of (exponential) success, we must quickly start charging customers!
+
+=== Matureness of the technology
+
+Both AMQP and XMPP are very mature technologies. For both excellent documentation exists. However, AMQP is used at far bigger scale with much higher message throughput that XMPP.
+
+== Proposed solution
+
+I propose to build on AMQP
+
+[arabic]
+. It was designed for a use case like ours (messaging between applications).
+. There is a mature service providing industry, offering managed services.
+. It does not technically lock us in with a specific service provider.
+. There is good software support in the browser environment.
+. Excellent documentation is available.
+
+Admittedly, for XMPP points 3, 4 and 5 hold, too. It is points 1 and 2 that make the difference.

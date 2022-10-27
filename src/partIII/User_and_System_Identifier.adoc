@@ -1,0 +1,64 @@
+[desc="The indexed names for the 'own user' and his system are handled a little different from other indexed names."]
+= User and System Identifier
+
+sys:MySystem and sys:Me are replaced by unique ‘private’ names, like all other indexed names, but we handle them a little different. This is because we have to generate a unique name for a particular PDR installation _before_ the functions are executed that replace all other indexed names. This text explains why and how. It also explains the relation between these two, the user database names and some facilities for testing.
+
+WARNING: This text is not entirely up to date. The area is currently in development, which is why we have not yet updated this section, even though it no longer reflects the implementation.
+
+== The origin of the system identifier
+
+When InPlace is first fired up on a computer, Couchdb is supposed to be in PartyMode. The user, having no account, enters a username and a password of her choice. The PDR then calls the function setupCouchdbForFirstUser. This function will, eventually, generate a guid that will be the base of the system identifier. However, for now, during development, for easy testing, we just use the user identifier that the user just typed in. In this text we call it the systemIdentifier.
+
+We also have a function setupCouchdbForAnotherUser. Like for the first user, it will in the end generate a guid but now just uses the user name provided to one of its parameters.
+
+== Persistence of system identifier, user name and password
+
+We put the user name and password and the system identifier into a data structure CouchdbUser:
+
+[code]
+----
+newtype CouchdbUser = CouchdbUser UserInfo
+
+type UserInfo =
+\{ userName :: UserName
+, couchdbPassword :: String
+, couchdbHost :: String
+, couchdbPort :: Int
+, systemIdentifier :: String
+, _rev :: Maybe String
+}
+----
+
+This structure is serialised and stored as a file in Couchdb in the database localusers. On logging in, the PDR fetches the document with the name entered by the user (it uses the special account authenticator to do so. The password for this account is kept in the source code. This is not particularly safe, but remember the database resides on the user’s own machine) and checks the password. If all works out, the PDR starts up with the above data structure as part of PerspectivesState.
+
+== System identifier as base name
+
+From the systemIdentifier we construct replacements for both sys:MySystem and sys:Me:
+
+[width="100%",cols="29%,23%,48%",options="header",]
+|===
+|*Purescript function* |*Indexed name* |*Private name*
+|getMySystem |sys:MySystem |model:User$<systemIdentifier>
+|getUserIdentifier |sys:Me |model:User$<systemIdentifier>$User
+|===
+
+These values are constructed by the two functions given in the first column. They take the value of systemIdentifier out of PerspectivesState.
+
+User database names are derived from systemIdentifier, too:
+
+* <systemIdentifier>_instances
+* <systemIdentifier>_models;
+* <systemIdentifier>_post.
+
+These databases are constructed by the functions setupCouchdbForFirstUser and setupCouchdbForAnotherUser.
+
+== Putting the systemIdentifier in PerspectivesState
+
+When the PDR fires up, it constructs a PerspectivesState that holds, among others, the systemIdentifier (as we’ve shown in _Persistence of system identifier, user name and password_). It then calls runPerspectivesWithState on that state and some value in MonadPerspectives to compute.
+
+However, there is another function, runPerspectives, that takes, among others an argument bound to its parameter systemId, that constructs an instance of PerspectivesState on the fly and then computes a value in MonadPerspectives. So while computing that value, for systemIdentifier we have that argument. This means that during that computation
+
+* Models and instances and transactions are taken from and written into a specific set of user databases, based on that argument value;
+* sys:Me and sys:MySystem are replaced by values based on that argument value.
+
+This is very useful for testing. We can run one computation for one user, then another for another user, all in the same test code!

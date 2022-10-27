@@ -1,0 +1,45 @@
+[desc="The Perspectives Universe would be static, but for the changes made to it by the end users. All of these changes are tracked and annotated with their author. In this text we discuss how we compute the authoring role."]
+= Who authors?
+
+Changes to Perspectives State (or, equivalently, the Perspectives Universe) come into being by executing functions in one of these modules:
+
+* the Perspectives.Assignment.Update module,
+* the Perspectives.Instances.Builders module or
+* the Perspectives.SaveUserData module.
+
+All these functions return results in (monads based on) the monad MonadPerspectivesTransaction.
+
+To accept changes coming from another user, they have to be authorized. We achieve this by sending deltas that are signed by the other user, and that explicitly represent (contain) the roles in which users made their changes.
+
+In this text I treat the question: how do we compute the role that is authorized to make the changes, in the modules listed above? The answer consists of two parts, because changes are either instigated either directly by the user, mediated by the GUI, through the API; or are executed automatically on state change on his (the user’s) behalf.
+
+== Automatic actions
+
+Automatic action on state change is given for a particular user. For example:
+
+[code]
+----
+state Unconnected = exists UnconnectedIndexedContext
+  on entry
+    do for <User>
+      bind object to IndexedContexts
+----
+
+As the example shows, we must stipulate the user role that we execute an action on behalf of. This source code translates to an Action and the user (i.e. the type) shows up as the Subject member of that Action.
+
+In the module Perspectives.Actions we compile automatic actions to executable code. Part of that code is a function that computes a Unit result in MonadPerspectivesTransaction, a so-called Updater:
+
+[code]
+----
+type Updater s = s -> MonadPerspectivesTransaction Unit
+----
+
+This Updater executes the effect. Now, just prior to executing this RHS, we add the subject of the action to the state of MonadPerspectivesTransaction. This state is a Transaction: it contains a member authoringRole and we bind the subject to it.
+
+As soon as the RHS has finished, we restore the previous value of authoringRole (if any) in the Transaction. In other words, we _wrap_ the Updater in a state that holds the authoring user role. State changes may trigger automatic actions; this mechanism makes sure that all functions in the aforementioned three modules can just take the author role right from state.
+
+== API calls
+
+The end user can only change the Perspectives Universe through the Graphical User Interface. Now this interface consists of screens that are built from parts that represent a particular user role’s perspective on a context. When the user navigates to another context, just prior to displaying such a part, the GUI code asks the PDR for the role that the user plays in that context.
+
+With each and every call that changes Perspectives State, the GUI returns that role. It is the authoring role. In the API, we put that role in the Transaction in which the change is computed, thus ensuring that all functions in the three modules mentioned above are informed correctly about the authoring rolefootnote:[If no authoring role is provided by the API caller, we take it to be the System User.].

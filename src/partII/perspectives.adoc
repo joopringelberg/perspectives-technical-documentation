@@ -1,4 +1,12 @@
 [desc="A perspective is not a type but a relation between roles."]
 == Perspectives
 
-Bla bla bla
+include::The_Operational_Meaning_of_a_Perspective.adoc[leveloffset=2]
+
+include::Contextualizing_Queries.adoc[leveloffset=2]
+
+include::Adding_Aspect_Perspectives.adoc[leveloffset=2]
+
+include::Universal_Perspectives.adoc[leveloffset=2]
+
+include::Perspectives_on_bindings.adoc[leveloffset=2]

@@ -1,0 +1,73 @@
+
+= Unlinked Roles
+
+Role- and context instances are represented in the PDR by mutually referring data structures. A reference consists of an identifier that we use to retrieve the data structure from the database.
+
+For a non-functional role, a context holds an array of references: one for each of its instances. The number of instances may grow very large for some types of roles. This may make the memory cost of caching their context prohibitive.
+
+== Retrieve with a query instead of by identifier
+
+We offer the modeller a ‘compiler instruction’ to use with a role definition: the keyword unlinked. It can be used as follows:
+
+[code]
+----
+context Chats (unlinked) filledBy Chat
+----
+
+(taken from model:SimpleChat).
+
+The role Chats will not figure in instances of its context, ChatApp. Instead, when query evaluation proceeds with the step Chats, as in:
+
+[code]
+----
+user: Chatter (mandatory, functional) filledBy: sys:PerspectivesSystem$User
+  perspective on Chats >> binding >> context >> Initiator
+----
+
+the PDR will perform a query on the database for all role instances of the type `model:SimpleChat$ChatApp$Chats`, whose context is the context the query tries to get the Chats from.
+
+Semantically, there is no difference between linked roles (the default) and unlinked roles.
+
+=== Reversing over an unlinked role
+
+Interestingly, we outfit the role instances with a direct reference to their context – just like instances of linked roles. This means that when the query evaluator encounters a context step, it handles both cases in the same way.
+
+=== Deleting unlinked role instances
+
+On deleting an unlinked role instance, we remove it from the database, just like with an instance of a linked role. However, there is no need to remove its reference from its context.
+
+== Retrieving role instances by Aspect name
+
+When a role has been declared to have an Aspect, we say that it has that Aspect as its type, too:
+
+[code]
+----
+case CouchdbServer
+  aspect acc:Body
+  ...
+  user Admin filledBy CouchdbManagementApp$Manager
+    aspect acc:Body$Admin
+----
+
+An instance of `model:CouchdbManagement$CouchdbServer$Admin` is an instance of `model:BodiesWithAccounts$Body$Admin`, too.
+
+We can use, in a query, the step `Body$Admin` to retrieve role instances from an instance of context type CouchdbServer. This is important because it allows us, for example, to create an automatic action in the Aspect that is carried out on an instance.
+
+But how do we (technically) retrieve such an instance using the Aspect role name?
+
+For ordinary (linked) roles, we keep, in the context instance, a table of _aliases_: this table maps each aspect type to the role that uses the aspect. So, in an instance of CouchdbServer we would be able to look up `model:BodiesWithAccounts$Body$Admin` and get `model:CouchdbManagement$CouchdbServer$Admin`: we then lookup the role instance in the context instance using the latter name.
+
+=== Unlinked roles pose a challenge
+
+However, as we do not record unlinked role instances in their context instance, we have no aliases, either. Moreover, we look up unlinked role instances in the database, using a double key consisting of
+
+* the context instance identifier
+* the role type identifier.
+
+We send that information to a Couchdb View that constructs, for each document in the instances database, a similar pair. Only documents with matching pairs are returned (this might seem a computing intensive process, but Couchdb prepares and caches views in the form of a B-tree that allows for quick lookup and easy maintenance in the face of new documents).
+
+Obviously, we cannot retrieve an unlinked role instance using an Aspect name.
+
+To repair this situation, we have extended the view. Each document produces not only the pair given above, but also pairs for each type that the role instance has: we record all (aspect) types in an instance. This is an optimization: we could just as well use type reflection, but that would be a lot slower.
+
+So, while this process produces too many key pairs (we get pairs for non-ground states too), we at least get a pair for each of an instances types and hence we can retrieve an unlinked role instance by one of its Aspect type names, too.

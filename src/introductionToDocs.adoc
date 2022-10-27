@@ -38,19 +38,19 @@ PART II is devoted to the _design_ of the Perspectives Language. It ranges from 
 PART III goes into the nitty-gritty of the implementation. Expect the most technical issues here. We cover:
 
 * The architecture of the PDR and InPlace
-* The mechanismes of state change
+* The mechanisms of state change
 * The workings of state synchronization between peers
 * The Foreign Function Interface (FFI)
 
 === Other resources
 There are quite a few other resources on the Perspectives project.
 
-* The starting page for all {url-perspectivesdoc}[Perspectives documentation].
+* The starting page for all https://joopringelberg.github.io/perspectives-documentation/[Perspectives documentation].
 
-* The {url-inplaceuserguide}[InPlace User Guide], which is more of a reference.
+* The https://joopringelberg.github.io/perspectives-documentation/userguide.html[InPlace User Guide], which is more of a reference.
 
-* {url-tutorial}[A small tutorial] to get started.
+* https://inplace.works/gettingstarted/overview.html[A small tutorial] to get started.
 
-* {url-reference}[Reference of the Perspectives Language]
+* https://joopringelberg.github.io/perspectives-documentation/perspectives%20language%20reference.html[Reference of the Perspectives Language]
 
 NOTE: If you find something wrong with this documentation, please create an issue at the {url-inplaceissues}[Issues section on Github]. Use the label `documentation`.

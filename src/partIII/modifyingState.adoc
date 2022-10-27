@@ -1,4 +1,11 @@
+[multipage-level=3]
 [desc="The technical details of modifying state."]
 == Modifying State
 
-bla bla
+include::State_and_Notification.adoc[leveloffset=2]
+
+include::State_change.adoc[leveloffset=2]
+
+include::Execution_model.adoc[leveloffset=2]
+
+include::Creating_and_deleting_contexts.adoc[leveloffset=2]

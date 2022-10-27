@@ -8,3 +8,9 @@ include::Type_and_resource_identifiers.adoc[leveloffset=2]
 include::Mapping_Model_Identifiers_to_Storage_Locations.adoc[leveloffset=2]
 
 include::currentcontext_and_currentrole.adoc[leveloffset=1]
+
+include::Indexed_Names.adoc[leveloffset=2]
+
+include::Technical_design_standard_variables.adoc[leveloffset=2]
+
+include::Unlinked_Roles.adoc[leveloffset=2]

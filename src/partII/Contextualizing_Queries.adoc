@@ -1,0 +1,107 @@
+
+= Contextualizing Queries
+In this chapter we explore a theme that we will continue in the next chapter: contextualization. Contextualizing of queries is a simple case of the more general phenomenon, so we use it to build some intuition.
+
+== Aspects
+Perspectives relies on a powerful abstraction mechanism called _aspects_. An aspect is a Context (we talk about _types_ unless specified otherwise). that may be added to another Context, which we call a _specialiser_ of the aspect. It thereby brings its roles into that specialiser. Furthermore, a role in the specialiser may be augmented by a role of the aspect. The role thus becomes a specialiser, too. The effect of Role specialisation is that
+
+[arabic]
+. The aspect Role properties are added to the specialiser’s role;
+. The binding of the specialiser _must be equal to or more specific than_ that of the aspect role;
+. If the aspect Role is a User role, its perspective (a collection of Actions) is added to that of the specialiser role.
+
+=== Example
+
+model:SimpleChat contains the definition of Chat, whose definition follows (partly) below:
+
+[code]
+----
+case Chat
+  aspect sys:Invitation
+  user Partner (not mandatory, functional) filledBy sys:PerspectivesSystem$User
+    aspect sys:Invitation$Invitee
+----
+
+Chat has aspect sys:Invitation:
+
+[code]
+----
+case Invitation
+  state Invite = exists Invitee
+    on entry
+      do for Invitee
+        ...
+  user Invitee ...
+----
+
+The role Partner in Chat is a specialisation of the role Invitee of Invitation. Notice that we run an automatic action on behalf of Invitee in Invitation, as soon as there is one.
+
+=== Problem statement
+
+When we add an instance of Partner to an instance of Chat, we expect the automatic action to execute.
+
+[quote]
+In the rest of the text we will write ‘when we add a Partner to a Chat’, leaving out all references to instances, meaning the same thing.
+
+After all, Partner is just an Invitee in disguise. But prior to Perspectives v0.5.0 that did not happen. The state condition, being the query `exists Invitee`, applies the step Invitee to the instance of Chat, looking for a _literal_ occurrence of “Invitee”(properly qualified, so really: `model:System$Invitation$Invitee`). And it will not find it: it has an instance of Partner instead. As a consequence, the rule will not fire.
+
+We could, of course, rewrite the condition:
+
+[code]
+----
+  state Invite = exists Partner
+----
+
+This would work. We would have _contextualised_ the state condition in the type Chat. Obviously, we would have to add the state definition to Chat (the model checker would refuse it as part of Invitation, because Partner is not defined in model:System). So in effect we would have to overwrite this rule in the specialising context.
+
+That is not what we want. We want a mechanism that contextualises automatically.
+
+== Solution
+
+There are several ways to solve this problem. In principle, we would like to solve it entirely in compile time (let the modeller wait so the end user has better performance). This would involve automatically rewriting queries from aspects to fit their specialisers. It would also entail inverting those specialised queries. And these inverted specialised queries would, by definition, cross more model boundaries than the originals. It is not impossible, but cumbersome.
+
+Instead, we have chosen to do a little more work in runtime. The key observation is that _we need aliases when looking up roles_. When looking up Invitee, we should know that Partner is an alias – and lookup with that key, too.
+
+We can find aliases by reflecting on the model. After all, the definition of Partner references Invitee. How and when do we use this information?
+
+NOTE: The description below is but partial, because it omits a complication introduced by the fact that we sometimes want to add an extra context clause to looking up filled roles.
+
+=== Double indexing: aliases in context types
+
+In v0.4.0, a PerspectContext instance contains an Object (Array RoleInstance) where the keys are the (string values) of Role(types). Retrieving the instances of a Role requires just one lookup.
+
+We will change that by
+
+* Adding a new member to Context (the representation of context _types_): roleAliases. This will be an Object EnumeratedRoleType. The keys are, as before, Role(types); the values are Role types that are actually represented on context instances;
+* Looking up a particular Role in a context instance in two steps: first we find, in the roleAliases of the context instance's type, the represented role type that we then use to look up the actual instances in roleInstances.
+
+On transforming a model source file, whenever we find a role R that has another role as an Aspect, we add an entry to the aliases registration of R's context type.
+
+=== Reverse lookup: the filled role step
+
+There are two ways for a query to visit a role instance. The first, which we’ve discussed above, is when we move from a context instance to a role instance. The second is when we move from a role instance to a particular (set of) filled roles (filled by the the instance we depart from).
+
+The filled role step requires a Role(type) because any Role may fill many others. Obviously, this step is affected by contextualisation, too. As an example, consider this small query:
+
+[code]
+----
+User >> fills Invitee >> context
+----
+
+As Invitee is filled by model:PerspectivesSystem$User, we can navigate back from an instance of model:PerspectivesSystem to all Invitation(s) its user role fills an Invitee role in. But now consider a Chat with a Partner. Partner will be bound to User as well. However, in version v0.4.0, this query will not find any instance of Chat.
+
+Again, we have to rely on aliases to make it work. But this time, as the direction is reversed, the alias table is constructed and located differently.
+
+We add a new member to PerspectRol: roleAliases. This is an Object (Array RoleType). Its keys are the string values of Role(types). Its values are the Roles that specialise the key, including itself.
+
+The representation of the filled roles does not change. But lookup does. In our example, we first look up Invitee in roleAliases _on the instance_. It finds Partner and then looks that up. Thus it finds the Partner instance that is filled by the user instance.
+
+We build this structure gradually. If there is not yet an entry for a Role(type), we reflect on the model, find all aspects of the type and add the type under the entry for each aspect (adding an entry when necessary).
+
+== No consequences for serialization
+
+The association between a Role(type) in the object aliases, and a particular index in roleInstances, depends on the historic order in which role instances were added to that particular context instance. These histories could be different for users sharing that context: one may have a perspective on a Role that another has not.
+
+This learns us that we cannot communicate these indices in Deltas. But this need not worry us, because a Delta is like a _remote procedure call_ rather than a data item. The receiver of a Delta executes the call and that will lead to appropriate and possibly unique association between role types an indices.
+
+Similarly, a context Serialization is translated into calls to functions that reconstruct contexts and roles.

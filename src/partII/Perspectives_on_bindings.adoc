@@ -1,0 +1,216 @@
+[desc="On the technical realization of the design decision that a role filler's properties should be accessible lik its own properties"]
+= Perspectives on role fillers
+
+The properties of a Role’s binding are as accessible as if they were the Role’s own properties. The modeller may add a View to an Action that includes any of these binding properties. And this applies to the binding of the binding, recursively.
+
+In this text we address the technical question: how do we make sure that changes to such properties are distributed properly?
+
+A strongly related question involves adding a binding to a role. The point is that behind that binding, an entire graph of other bound roles and their contexts that were previously hidden, may suddenly come in scope for some Users. How do we make sure that updates are sent to them that ensure they actually have access to that graph? For an explanation, see <<Sync subnetworks as a consequence of a new binding>>.
+
+== Access to a property considered to be a query
+
+We invert CalculatedRoles – being query definitions - so we can compute the users that should be informed about some ContextDelta (remember, ContextDeltas describe adding or removing Role instances to or from a Context instance). A CalculatedRole is like a teleport into some other context for a User in his origin context, allowing him to see and manipulate a role in that faraway context.
+
+Now consider a User Role U with a perspective on a role R in his origin context C. ‘Having a perspective’ means that U has access to some property P on R. We can construct that as U being in the position to request (from the PDR) a query on (some instance of) C:
+
+[quote]
+I will write ‘User role U can see role R’, where U and R are types, in the understanding that it is _instances_ of U that actually ‘see’ or ‘receive’ _instances_ of R.
+
+[code]
+----
+role R >> property P
+----
+
+We now see that we could apply the same mechanism sketched above for CalculatedRoles to this perspective of U on R. Invert the query and run it when P changes. Now, because we have two steps, we actually have two inverted queries:
+
+[code]
+----
+ValueToRole P >> context
+----
+
+context
+
+The first inverted query we store with the Property P in its onPropertyDelta member. When an update function like addProperty is executed, a RolePropertyDelta is stored in the currently open Transaction. When it comes to distributing that Transaction, we execute the InvertedQuery’s in the onPropertyDelta member of the Property mentioned in the Delta. This finds us contexts. An InvertedQuery lists relevant User Roles, too. We then ship the Delta to the instances of those User Roles in the contexts we’ve found.
+
+In short, by storing the first inverted query in the onPropertyDelta member of P, we make sure that U is informed of any change to P (please note that the change to P might come from some other User in C, for example. We do not distribute changes that a user makes to himself!).
+
+We store the second inverted query (just context) in the onContextDelta_context member of R. Now, when an instance of R is added to an instance of C, by similar reasoning as for properties, instances of U are informed of that change.
+
+== Binding
+
+R might have a binding, let’s say of type B. Let’s suppose U has a View on R that includes some property of B, named P~b~. Obviously, when P~b~ changes, U should be informed. How do we make this work?
+
+First, consider, again, U’s perspective to imply an implicit query:
+
+[code]
+----
+role R >> binding >> property P~b~
+----
+
+The inverter now yields three queries:
+
+[code]
+----
+ValueToRole P >> binder R >> context
+
+binder R >> context
+
+context
+----
+
+This is what happens:
+
+* The first query will be stored in onPropertyDelta of P~b~. This will make sure that changes of that property are sent to U.
+* The second query will be stored in onRoleDelta_binder of B. A RoleBindingDelta on B will lead to its execution, finds us instances of C and then the instances of U that will receive the Delta.
+* Finally, as above, the last inverted query is stored with onContextDelta_context of R. ContextDeltas that change the instances of R will be distributed to U.
+
+So we see that all possible changes along the path from C to the binding property P~b~ are communicated to U.
+
+These examples set the stage for the generic solution of the problem: how to distribute changes somewhere on the binding role graph of R to users with a perspective on R?
+
+== Solving the general case
+
+The binding of a Role is given as a ADT EnumeratedRoleType. This allows us to construct elaborate Role graphs as the binding of a Role. The children of a node may be conjunctive (meaning that an instance can have multiple bindings), or disjunctive (an instance may have one binding, albeit of different types). The simple case is a straight path (like the examples above). We want to prepare our types, in compile time, with inverted queries to make sure that Deltas reach all relevant Users.
+
+The examples illustrate the approach for the case in which the binding is ST EnumeratedRoleType. We now consider the other cases.
+
+=== UNIVERSAL
+
+When we declare the binding of a Role to be UNIVERSAL, we prohibit instances from having a binding at all
+
+[quote]
+The syntax for this is: R filledBy: None. Intuitively one would expect None to mean EMPTY. However, a universal role must carry all possible properties, including the property without value. No instance can ever have a property that has no value – so it is not possible to bind to a role whose binding is required to be UNIVERSAL.
+
+Any properties in a View on that Role must be the Role’s own properties. We just have the inverted query context to consider. We’ll store it, as above, with onContextDelta_context of R.
+
+=== EMPTY
+
+Instances of a Role with a binding of EMPTY can be bound to anything. We do not pose any restriction. This is the default case, if we have not specified a binding type in our model text.
+
+However, there is no practical preparation we can do, compile time, to handle this situation. In theory we could construct a role graph that is a huge product of all known roles. This would make us add an inverted query to each other Role. For obvious reasons, we do not do that.
+
+This means that our implementation is incomplete for the EMPTY case. That leads to a best practice for modellers: specify a binding for each role, possibly UNIVERSAL.
+
+=== SUM
+
+By giving multiple bindings for a Role, we implicitly construct a Sum type. The modeller is restricted to properties that can be found on all members of the Sum. Interestingly, the queries leading to those properties do not have to be equal. Along one path, one may reach a Role with the requested property in two steps, while another path may take three steps (to given an example). There is a generic recipe for all such queries:
+
+[code]
+----
+role R >> binding* >> property P
+----
+
+The number of binding steps varies from 0 to some arbitrary number. However, the inverted queries show the differences clearly. As an example:
+
+[code]
+----
+Value2Role P >> binder R >> context
+
+Value2Role P >> binder X >> binder R >> context
+----
+
+When navigating backward, we have to choose the right binder and this clearly illustrates the node graph underlying the binding of R.
+
+This also gives us our recipe to handle this case. We should follow each path through the role graph, construct a query on the way, and then invert that query and store it with all stations.
+
+=== PRODUCT
+
+Finally, the PRODUCT case. Somewhat surprisingly, the SUM recipe works for PRODUCT, too: work through all paths, and invert them.
+
+[quote]
+There is currently no syntax yet to construct PRODUCT binding types. However, by constructing a Calculated query with a join expression and specifying that as the binding, we can in effect make a Role have a PRODUCT binding.
+
+== A practical algorithm
+
+While the above is a complete approach, it is more conceptual than practical. It would involve constructing a query for each and every property in a view. Their inversions would have a lot of overlap. Is there a faster algorithm to construct all inverted queries? It turns out there is.
+
+=== Relevant properties
+
+First, consider the properties relevant to a perspective. A perspective consists of a number of Actions and each Action has a View. The union of properties in those Views is relevant to the perspective and to our algorithm (but see the chapter <<Relevant properties revisited>> below).
+
+=== Simple case: a role ladder
+
+Next we will consider the case of ST EnumeratedRoleType bindings: they form a graph that is a _ladder_. We will descend that ladder, carrying an inverted query with us that grows on each step. We start with the context step. Remember that, in order to access a property on the ladder, the User requests a query whose first step is role R. We start with its inversion!
+
+==== First step
+
+So our first step lands us on the (the rung with) Role R with the inverted query context. We now ask ourselves two things:
+
+[arabic]
+. Does R carry a property that is in the set that is relevant to the perspective?
+. Does the binding of R carry such a property?
+
+If either is true, we store our inverted query in onContextDelta_context of R. Moreover, for any property P of R in the relevant set, we compose a query from Value2Role and context and store that in onPropertyDelta of P.
+
+Having finished the work on this first step, we descend to the next level down. That is, we apply our function to the binding of R. Doing so, we extend the inverted query we carry by prepending a binder step to it:
+
+binder R >> context
+
+==== Next step
+
+We now arrive on rung with Role B, the binding of R. Again, we ask ourselves two questions:
+
+[arabic]
+. Does B carry a property that is in the set that is relevant to the perspective?
+. Does the binding of B carry such a property?
+
+And we handle the answers like before. However, we would now store
+
+[code]
+----
+binder R >> context
+----
+
+with onRoleDelta_binder of B, since we carry an extended inverted query. Similarly, the query we would store in onPropertyDelta of any Property of B is:
+
+[code]
+----
+Value2Role >> binder R >> context
+----
+
+Now suppose we do, indeed, find a Property in the relevant set that is a property of B – or suppose that question 2 yields true. [.underline]#We then know the answer to question 2 of the first (previous) step on the ladder!#
+
+We make our function return true to signal that to ourselves in the waiting recursive call.
+
+In other words, the answer to the second question is always provided by the recursive call to our function.
+
+==== Final step
+
+How does it end?
+
+We have arrived at the bottom of the ladder when the binding of the role on the current rung is EMPTY or UNIVERSAL. We handle both in the same way. If we have no properties on the current role that are in the relevant set,
+
+* We do nothing with our inverted query
+* We make our function return false.
+
+Otherwise, we store the inverted query (prepended with Value2Role) with the onPropertyDelta of the properties we’ve found. We then make our function return true.
+
+=== Branching case: SUM or PRODUCT
+
+Branching is simple. We step down once for each term in the SUM or PRODUCT. Notice that each time we carry a different inverted query (with a binder step for the term we select).
+
+In the SUM case, all steps down must return the same Boolean value. That is because we must encounter the same properties along each path through the role graph.
+
+In the PRODUCT case, if any step down returns true, our function must return true, too.
+
+== Relevant properties revisited
+
+A modeller _may_ specify a View on the Object of the perspective for each separate Action. But he is not required to specify a View. Omitting it, he signals that all properties are relevant.
+
+Conceptually,
+
+* The View for an action is unspecified,
+* unless the modeller has given a View for the Object, or
+* unless the modeller has given a View specifically for the Action.
+
+The View given for a specific Action may either extend or limit the View given for the Object. However, if no view is given for the Object, the relevant properties for the perspective (as we’ve defined them above) include all properties (any more specific Views for selected Actions have no influence on the relevant properties for the perspective).
+
+If all properties are relevant, we need not check, in our algorithm, whether, having arrived at a particular role in the graph, if any properties are in the set. By definition they all are in the set.
+
+Rather than first traversing the role graph to collect the properties and then, superfluously, checking for each property whether it is in that set, we introduce a special case when no View has been set on the Object. We do that by introducing a data type:
+
+data RelevantProperties = All | Properties (Array EnumeratedPropertyType)
+
+=== Aspect properties
+
+Notice that a View may refer to a Property that is defined on an Aspect of the Role it belongs to. Hence, to check whether a Property is in the Role namespace would miss those Aspect Properties. Instead, we have to collect all Properties defined on a Role and its Aspects.

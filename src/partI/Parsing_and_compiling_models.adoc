@@ -1,4 +1,3 @@
-:sectnumlevels: 4
 [multipage-level=3]
 = Parsing and compiling models
 

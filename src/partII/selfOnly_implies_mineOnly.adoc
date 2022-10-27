@@ -1,0 +1,42 @@
+[desc="An unexpected corollary of the 'selfOnly' modifier on role definitions"]
+= `selfOnly` implies `mineOnly`
+
+The selfOnly modifier can be used to restrict a perspective of a user role on itself – a self-perspective – to just itself. Take, for example, the role of Account in context Body in model:BodiesWithAccounts: here the Account has a perspective on himself, but the selfOnly modifier restricts the available instances of Account to just one role – filled, ultimately, by himself.
+
+This may be taken as a way to protect the privacy of Account holders; neither can see the others (note that to complete this pattern, the Account role needs to be unlinked, too. See the document _The Body With Account Pattern_).
+
+== Mine only!
+
+Surprisingly, this has an interesting consequence. Suppose that, within the same context, the Account can make another role. Let’s call it a Contract, to stay within our example. Account must have a perspective on Contract to be able to create it (and therefore can see it as well).
+
+It would, of course, be appropriate if an Account could see just his own Contract. Hence, we would like to have a modifier for Contract like ‘mineOnly’, to prevent the PDR of an Account from sending a freshly created Contract to all other Accounts.
+
+However, pausing for a moment: what other Accounts? The very fact that the self-perspective of Account is selfOnly, means that the PDR of an Account has no information on any other Accounts. Hence, by implication, for an Account his perspective on Contract is ‘mineOnly’.
+
+== Other user roles
+
+Suppose that the Admin of Body has a perspective on Contract, too. This would cause the PDR for any Account to send deltas for constructing a Contract to the Admin PDR. That is entirely in order.
+
+But what happens if Admin creates a Contract? According to the model, Account has a perspective on Contract, hence Admin will send deltas – to the PDR of each Account it knows about. And Admin can see all Accounts.
+
+This would constitute a privacy breach.
+
+We see, then, that the ‘mineOnly’ effect implied by selfOnly is limited. Limited, in fact, to roles that just the user role with the selfOnly modifier has a perspective on.
+
+== Exploring an improvement: "only for those playing a role"
+
+From the perspective of Admin, the restriction on Contract should be something like: only those Contracts that are relevant to an Account. But how can we make that computable? It turns out we cannot, without creating a special relationship between roles (we’d need to annotate, somehow, the Contract role with the User role that it ‘belongs to’).
+
+But we can define ‘relevant’ for context roles. Suppose that Contract is a context role filled by a Contract context and that Account fills a user role in that context, let’s say Party (to the Contract). Then we could define context X is relevant to user role Y if Y plays a role in X.
+
+We’ll name the keyword we’d like to use onlyWhenInvolved. It can be applied to qualify a perspective. In this case, we’d like to qualify Account’s perspective on Contract with onlyWhenInvolved.
+
+Let’s have Admin create a Contract context (and bind it in Body in the Contract role). At this point, no user role is present in Contract, so the Admin PDR does not send any deltas. onlyWhenInvolved prevents the it from doing so. It first notices that Account has a perspective on Contract, but then finds no user role in Contract, so no Account is involved.
+
+But as soon as Admin creates an instance of the Party user role in Contract _and fills it with a particular Account_, the PDR should send deltas to that Account. How is that done?
+
+It starts with filling Party in Contract with Account. Party will have some perspective in Contract (otherwise it would not be a user role). For simplicities sake we can assume it has a self-perspective. The PDR of Admin will find that deltas for the Party role instance should be sent to the PDR of the Account. It never sends a free-floating role, so the Contract context is sent, too, complete with its external role.
+
+At this point, things will stop. The Contract _role_ in Body is not sent to Account, unless we activate a special mechanism.
+
+What can that be?

@@ -1,6 +1,7 @@
 :stylesheet: ./adoc-colony.css
 
 :sectnums:
+:sectnumlevels: 4
 :multipage-level: 2
 :doctype: book
 :toc: left
@@ -45,7 +46,7 @@ include::partII/perspectives.adoc[]
 
 include::partII/queries.adoc[]
 
-include::partII/aspects.adoc[]
+// include::partII/aspects.adoc[]
 
 = PART III. IMPLEMENTATION DETAILS
 

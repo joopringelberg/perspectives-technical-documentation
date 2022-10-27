@@ -1,0 +1,174 @@
+[desc="Queries are built from operators that select instances. However, there also are functions that operate in type space. In this text we explore the way we implement the integration of both."]
+= Composing instance level and type level query functions
+
+Consider the following two functions:
+
+[code]
+----
+contextType :: ContextInstance ~~> ContextType
+
+contextRole :: ContextType ~~~> RoleType
+---- 
+
+The former gives us the type of a context instance; the latter gives us all RoleTypes defined for a context type. A reasonable use case is to compose these two:
+
+[code]
+----
+Z = contextType >=> contextRole
+----
+
+However, the Purescript compiler flags a type error. The first function is _defined on the instance level_, while the latter is _defined on the type level_.
+
+We will explore what these two terms mean and how we can reconcile both types so we can safely compose these functions.
+
+== Instance level functions
+
+Let’s examine the type of contextType. It expands according to the following types:
+
+[code]
+----
+infixl 5 type TrackingObjectsGetter as ~~>
+
+type TrackingObjectsGetter s o = s -> MonadPerspectivesQuery o
+
+type MonadPerspectivesQuery = ArrayT (WriterT (Array Assumption) MonadPerspectives)
+----
+
+to:
+
+[code]
+----
+contextType :: ContextInstance -> ArrayT (WriterT (Array Assumption) MonadPerspectives) ContextType
+----
+
+So we see that this function computes a result in a monad stack that has MonadPerspectives at the bottom, WriterT above that and on top ArrayT. The WriterT monad transformer allows us to gather Assumptions. This is for query dependency tracking, explained elsewhere. As a spoiler: we do not track dependencies on the type level (because we do not allow type level queries through the API).
+
+[quote]
+Well, not really: MonadPerspectives itself is ReaderT (AVar PerspectivesState) Aff, but this need not concern us here as we will dig no deeper than MonadPerspectives.
+
+Furthermore, ArrayT allows us to work with Arrays of values and still compose functions as if they yielded single values. It abstracts away _un-determinedness_ with respect to functional result, as it would be put in FP terms.
+
+Let’s turn to type level functions next
+
+== Type level functions
+
+The type of contextRole expands as follows:
+
+[code]
+----
+infixl 0 type TypeLevelGetter as ~~~>
+
+type TypeLevelGetter s o = s -> ArrayT MonadPerspectives o
+----
+
+to:
+
+[code]
+----
+contextRole :: ContextType -> ArrayT MonadPerspectives RoleType
+----
+
+This type is less involved. We merely get an undetermined (Array) result in MonadPerspectives. As said before, this type allows us to use Kleisli composition on such functions.
+
+== The problem, revisited
+
+We can now state the problem clearly. We want to compose two functions with the following types:
+
+[code]
+----
+contextType :: ContextInstance -> ArrayT (WriterT (Array Assumption) MonadPerspectives) ContextType
+
+contextRole :: ContextType -> ArrayT MonadPerspectives RoleType
+----
+
+The problem is that both stacks have ArrayT on top and MonadPerspectives as the bottom, but that the first stack has WriterT (Array Assumption) in between.
+
+Notice that we apply the instance level function first and that it results in a type. This type is input for the type level computation. In other words, we move from instance- to type level. While the other way round is certainly possible, there seem to be far less use cases as we seldom ask for the instances of a type.
+
+How do we make these types compatible?
+
+=== runArrayT
+
+We have function runArrayT to strip away the ArrayT layer:
+
+[code]
+----
+runArrayT :: forall m a. ArrayT m a -> m (Array a)
+----
+
+Applying these to our functions, we get:
+
+[code]
+----
+runArrayT <<< contextType :: ContextInstance -> (WriterT (Array Assumption) MonadPerspectives) (Array ContextType)
+
+runArrayT <<< contextRole :: ContextType -> MonadPerspectives (Array RoleType)
+----
+
+Now, remembering we want to move from the instance- to the type level, it seems appropriate to reframe our problem as: how can we lift `runArrayT <<< contextRole` to the type of runArrayT <<< contextType? So, we want to lift
+
+MonadPerspectives (Array RoleType)
+
+To:
+
+[code]
+----
+WriterT (Array Assumption) MonadPerspectives) (Array RoleType)
+----
+
+That is actually not too difficult, we can just lift `runArrayT <<< contextRole`:
+
+[code]
+----
+lift <<< runArrayT <<< contextRole :: ContextType -> (WriterT (Array Assumption) MonadPerspectives) (Array RoleType)
+----
+
+We’re almost done. We now want to abstract over the Array RoleType result, so we can deal implicitly with the un-determinedness of the result. That’s what ArrayT is for:
+
+[code]
+----
+ArrayT <<< lift <<< runArrayT <<< contextRole :: ContextType -> ArrayT (WriterT (Array Assumption) MonadPerspectives) RoleType
+----
+
+Reducing this long expression using our type definitions, we get:
+
+[code]
+----
+ArrayT <<< lift <<< runArrayT <<< contextRole :: ContextType -> MonadPerspectivesQuery RoleType
+----
+
+Or
+
+[code]
+----
+ArrayT <<< lift <<< runArrayT <<< contextRole :: ContextType ~~> RoleType
+----
+
+And we’re done: we now have a function we can compose with contextType:
+
+[code]
+----
+f :: ContextInstance ~~> RoleType
+
+f = contextType >=> ArrayT <<< lift <<< runArrayT <<< contextRole
+----
+
+== End result: lifting from instance- to type level
+
+As this is a pattern of composition we will encounter quite a few times, it is worthwhile to introduce a special lifting function to abstract the pattern:
+
+[code]
+----
+liftToInstanceLevel :: forall s o. (s ~~~> o) -> (s ~~> o)
+
+liftToInstanceLevel f = ArrayT <<< lift <<< runArrayT <<< f
+----
+
+So we can rewrite our function f above as:
+
+[code]
+----
+f :: ContextInstance ~~> RoleType
+
+f = contextType >=> liftToInstanceLevel contextRole
+----

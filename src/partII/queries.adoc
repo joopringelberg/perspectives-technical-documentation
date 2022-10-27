@@ -6,3 +6,9 @@ include::Binder_vs_Filler_terminology.adoc[leveloffset=2]
 include::State_and_dependency_tracking.adoc[leveloffset=2]
 
 // Add a section on dependency tracking here.
+
+include::Compose_instance_and_type_level_functions.adoc[leveloffset=2]
+
+include::The_case_for_Database_Query_Roles.adoc[leveloffset=2]
+
+include::selfOnly_implies_mineOnly.adoc[leveloffset=2]

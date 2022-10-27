@@ -72,7 +72,7 @@ The Foreign Objects are indexed by strings that represent the two elements of an
 * a resource (ContextInstance or RoleInstance)
 * and a type (EnumeratedRoleType, CalculatedRoleType, EnumeratedPropertyType or CalculatedPropertyType), or the special identifier "model:System$Role$binding"
 
-An assumption points to the value of a role in a context, a role binding, or of a property in a rolefootnote:[See _Implementing the Functional Reactive Pattern_ for a better explanation of assumptions (called ‘steps’ in that text).]. When changes to such values are made, the code reviews the assumption register to find correlation identifiers that identify functions that compute queries dependent on those values.
+An assumption points to the value of a role in a context, a role binding, or of a property in a role (see <<Implementing the Functional Reactive Pattern>> for a better explanation of assumptions (called ‘steps’ in that text)). When changes to such values are made, the code reviews the assumption register to find correlation identifiers that identify functions that compute queries dependent on those values.
 
 An instance of AssumptionRegister is stored in PerspectivesState under the key queryAssumptionRegister.
 
