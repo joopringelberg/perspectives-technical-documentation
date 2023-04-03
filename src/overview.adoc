@@ -59,8 +59,12 @@ This is the most technical part of the documentation.
 
 include::partIII/pdrArchitecture.adoc[] 
 
+include::partIII/PDRproxy.adoc[]
+
 include::partIII/modifyingState.adoc[]
 
 include::partIII/synchronizationRevisited.adoc[]
 
 include::partIII/ffi.adoc[]
+
+include::partIII/varioustopics.adoc[]

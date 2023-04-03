@@ -1,0 +1,22 @@
+[desc="Cross Origin Resource Sharing (CORS) issues."]
+= The "mode" option on Fetch
+
+Per March 2023 it became clear that the PDR suffered from an intermittent CORS problem. For no apparant reason, requests to perspectives.domains would be rejected. 
+
+At first it seemed to be an Apache problem. This is because the Chrome browser would report that the wrong certificate was sent along with a file requested from this domain (the inplace.dev certificate seemed to be attached).
+However, I've come to believe that Apache is not the source of the problem.
+Rather, the mistake stems from the fetch request made by Pouchdb: this does not set the "mode" option, making it effectively "no-cors" where it should have been "cors". According to the spec:
+
+	A request has an associated mode, which is "same-origin", "cors", "no-cors", "navigate", 
+	or "websocket". Unless stated otherwise, it is "no-cors".
+	(https://fetch.spec.whatwg.org/)
+
+I have corrected this by using the 'fetch' option provided to the database creation of Pouchdb. It allows one to capture fetch and add options and headers etc. to the actual request. On the assumption that, for Perspectives, any request through Pouchdb will be a cors request because we don't store resources on inplace.works, every request is a cors request.
+
+It seems as though FireFox doesn't suffer from the same problem. This might be because browser implementers have a certain freedom in implementing a default for the "mode" option:
+
+	Even though the default request mode is "no-cors", standards are highly discouraged from using it for 
+	new features. It is rather unsafe.
+	(https://fetch.spec.whatwg.org/)
+
+It looks like Chrome defaults to "no-cors" and Firefox does not.

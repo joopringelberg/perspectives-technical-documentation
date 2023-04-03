@@ -47,16 +47,16 @@ Models can be authored by anyone, all over the world. Models can also be _used_ 
 
 Model names need to be communicable, too, for example because authors may want to advertise their models. This precludes Globally Unique Identifiers (GUIDs) as defined in https://tools.ietf.org/html/rfc4122[rfc4122], _A Universally Unique IDentifier (UUID) URN Namespace_. These identifiers are anything but human-readable, are very hard to remember and so do not lend them for human communication.
 
-Instead, we construct a custom URI scheme with the name _model_. https://tools.ietf.org/html/rfc4122[rfc4122] states: _Many URI schemes include a hierarchical element for a naming authority so that governance of the name space defined by the remainder of the URI is delegated to that authority._ For Perspectives, we will rely on the domain name system (DNS) as the authority that governs name spaces for the internet, to ensure that model names are unique.
+Instead, we construct a custom URI scheme with the name _model_. https://www.ietf.org/rfc/rfc3986.txt[rfc3986] states: _Many URI schemes include a hierarchical element for a naming authority so that governance of the name space defined by the remainder of the URI is delegated to that authority._ For Perspectives, we will rely on the domain name system (DNS) as the authority that governs name spaces for the internet, to ensure that model names are unique.
 
 What identifiers can we construct under this scheme? Here is an example of a full URI:
 
-`model://perspectives.domains/System`
+`model://perspectives.domains#System`
 
-model is the scheme name, separated with a colon (as prescribed) from the identifier constructed under the scheme. The authority has to be delimited up front by two forward slashes and at the end by another forward slash.
+model is the scheme name, separated with a colon (as prescribed) from the identifier constructed under the scheme. The authority has to be delimited up front by two forward slashes and at the end by another forward slash, a question mark or a hash sign.
 
 [quote]
-In identifiers in the https scheme it may also be delimited by a question mark and various other means. However, not so in the model scheme.
+We forego the possibility to end the authority with a forward slash or a question mark: we just use the hash sign. This decision is heavily influence by the fact that forward slashes cannot be part of Couchdb file names.
 
 In the model scheme, the authority itself has no user- or port information. Following the authority is the local name for the model. This name must start with an upper case character and must be unique in the domain identified by the authority to make the URI unique.
 
@@ -77,7 +77,7 @@ We use a simple mapping from URI to URL. The authority (a reg-name) is used twic
 
 For example:
 
-`model://perspectives.domains/System`
+`model://perspectives.domains#System`
 
 maps to:
 
@@ -85,7 +85,7 @@ maps to:
 
 Another example:
 
-`model://social.perspectives.domains/System`
+`model://social.perspectives.domains#System`
 
 maps to:
 
@@ -102,7 +102,9 @@ According to its documentation, Couchdb allows forward slashes in its database n
 
 === Storage service providers
 
-Suppose Perspect BV io would provide storage services to third parties, how would it handle them? It could offer an author like me to use a subspace of their namespace perspectives.domains, e.g. `joopringelberg.perspectives.domains`. I could then create a model with this name: `model://joopringelberg.perspectives.domains/JoopsModel`. This would map to the following url: `https://perspect.it/models_joopringelberg_perspect_it/JoopsModel.json`. Their server would consequently look for the resource `JoopsModel.json` in the database `models_joopringelberg_perspectives_domains`.
+NOTE: This section may not be up to date.
+
+Suppose Perspect BV io would provide storage services to third parties, how would it handle them? It could offer an author like me to use a subspace of their namespace perspectives.domains, e.g. `joopringelberg.perspectives.domains`. I could then create a model with this name: `model://joopringelberg.perspectives.domains#JoopsModel`. This would map to the following url: `https://perspect.it/models_joopringelberg_perspect_it/JoopsModel.json`. Their server would consequently look for the resource `JoopsModel.json` in the database `models_joopringelberg_perspectives_domains`.
 
 While perfectly usable, I’d have to rename my model if I wanted to move it to a different provider, because I’d have tied my namespace to theirs (it is a subspace of theirs). That would be very impractical.
 
@@ -154,11 +156,11 @@ version core = numeric_identifier "." numeric_identifier "." <numeric identifier
 
 The versioned version of our previous example:
 
-`model://perspectives.domains/System`
+`model://perspectives.domains#System`
 
 would be, for example:
 
-`model://perspectives.domains/System@1.0.0`
+`model://perspectives.domains#System@1.0.0`
 
 and be mapped to the url
 
@@ -183,7 +185,7 @@ An _optional_ pre-release string may be appended to the model name, separated fr
 
 == Model description: a public context
 
-A domeinfile is a resource that holds the machine readable version of a model. However, end users will want to inform themselves about a model before taking it into use. For this we introduce the convention of a _model description_. The description of a model is itself a resource, a context instance to be precise. Its type is defined in `model://perspectives.domains/System`. The instance contains descriptive text, an expanded name, etcetera.
+A domeinfile is a resource that holds the machine readable version of a model. However, end users will want to inform themselves about a model before taking it into use. For this we introduce the convention of a _model description_. The description of a model is itself a resource, a context instance to be precise. Its type is defined in `model://perspectives.domains#System`. The instance contains descriptive text, an expanded name, etcetera.
 
 A model description should be accessible to everyone, or at least to everyone subscribing to a model repository (subscription may require a fee). A model description qualifies as a _public context_: it’s type defines a Visitor role (see the text _Universal Perspectives_).
 
@@ -191,7 +193,7 @@ Crucially, a public context is the same for everybody (Except for the model auth
 
 By convention, we will have a model description instance in a location that can be derived from the model URI. We have seen before that
 
-`model://perspectives.domains/System`
+`model://perspectives.domains#System`
 
 maps to:
 
@@ -211,7 +213,7 @@ For example:
 
 `https://perspect.it/cw_perspect_it/System.json`
 
-looks for `System.json` (the ModelManifest for `model://perspectives.domains/System`) in the database `cw_perspectives_domains`.
+looks for `System.json` (the ModelManifest for `model://perspectives.domains#System`) in the database `cw_perspectives_domains`.
 
 Obviously, like we saw above, it may forward these URLs to another domain, if that is convenient.
 
@@ -221,17 +223,17 @@ NOTE: the document needs updating below this point.
 
 Top level model types, like contexts and roles, have names that are scoped to model namespaces. This means that their name is prefixed with a namespace identifier. For example, the type PerspectivesSystem is identified by:
 
-`model://perspectives.domains/System$PerspectivesSystem`
+`model://perspectives.domains#System$PerspectivesSystem`
 
 === Type versioning
 
 Peers send deltas to a Distributed Runtime, so the installation may update its instances. A delta contains type information. We have to accommodate the situation where a peer might have another version of the model containing the type, than the receiver. Therefore we need to version types, too:
 
-`model://perspectives.domains/System$PerspectivesSystem@1.0.0`
+`model://perspectives.domains#System$PerspectivesSystem@1.0.0`
 
 Consider a domeinfile, representing a model at version 1.0.0. Now the author modifies the context PerspectivesSystem, but nothing else. This means that just the identifier of PerspectivesSystem changes: all other identifiers will retain their previous version.
 
-`model://perspectives.domains/System$PerspectivesSystem@1.1.0`
+`model://perspectives.domains#System$PerspectivesSystem@1.1.0`
 
 Obviously, all references to PerspectivesSystem in the model will be updated, too (but this does not cause those referring types to have version 1.1.0, too).
 
@@ -255,11 +257,11 @@ This is because a reference to a type name is not by its visible name (the local
 
 When a model is first parsed and saved, all local names are replaced by an integer. Integers start with 0 (for the root type, i.e. the namespace itself, the model identifier) and then increasing by 1 for every next type that the parser encounters. For example:
 
-`model://perspectives.domains/System$PerspectivesSystem@1.0.0`
+`model://perspectives.domains#System$PerspectivesSystem@1.0.0`
 
 is referred to in the domeinfile and in instances with:
 
-`model://perspectives.domains/System$0@1.0.0`
+`model://perspectives.domains#System$0@1.0.0`
 
 If the author modifies PerspectivesSystem to PSystem, he should provide an instruction to the parser:
 
@@ -284,7 +286,7 @@ A model text imports dependencies in this way:
 
 [code]
 ----
-use sys for model://cw.perspectives.domains/System@1.1.0
+use sys for model://cw.perspectives.domains#System@1.1.0
 ----
 
 Type names imported from another namespace will be replaced by using the name table of the corresponding domeinfile.
@@ -293,7 +295,7 @@ If the author updates the version of an import, the parser MAY compare the name 
 
 [code]
 ----
-use sys for model:cw.perspectives.domains/System#1.15.0 [up from 1.11.0]
+use sys for model:cw.perspectives.domains#System#1.15.0 [up from 1.11.0]
 ----
 
 Imported names must be fully qualified (either written in full, or with a prefix). Hence the parser can scan the model text for names that are replaced in the import (using the prefix, if applicable) and replace them automatically in the text.
@@ -306,52 +308,205 @@ The model text may refer to types that have been dropped in the new version of t
 
 NOTE: text is up to date from this point on.
 
-We introduce two more custom schemes for instances of contexts and roles, respectively:
+Instance identifiers identify context- and role instances. When two PDR installations exchange Transactions, we identify instances in them in terms of GUIDs (with one exception that will be explained below). However, within an installation, we use an extended format to store and look up resources. A _resource_ is the technical term that encompasses both instances and _DomeinFiles_: the json documents that hold type definitions. This is because, not on the logical level of the language, but on the technical level of the implementation, all json documents that we want to persist are treated as members of the classes `Persistent` and `Cachable`.
+
+We introduce the notion of a 'scheme' to identify resources locally. Schemes tell us where to find and store resources. End users have some influence on where resources are stored through the _local_ and _remote_ schemes, the former specifying a local database name and the latter a URL where the end user has facilities to store documents. However, DomeinFiles, with the _model_ scheme, are stored in a local database and _public_ schemed resources are stored in a location determined by their creator. Finally, _default_ schemed resources are stored in a local database. See module Perspectives.ResourceIdentifiers for more details.
+
+However, we allow the end user to associate each type in a model with a scheme. This is accomplished through a special model that provides the end user with a suitable user interface. Using this he can specify a mapping from types to storage schemes in as much detail as he prefers. Any type name functions as a namespace for syntactically embedded types. The system will use the most specific mapping for an instance. For example, 
 
 [code]
 ----
-context:\{GUID}
+model://perspectives.domains/System$PerspectivesSystem$User
 ----
 
-is an URI identifying a context, while
+is more specific than 
 
 [code]
 ----
-role:\{GUID}
+model://perspectives.domains/System$PerspectivesSystem
 ----
 
-identifies a role.
+If a mapping has been specified for the latter but not for the former, instances of the former will be stored according to the mapping of the latter.
 
-=== Stores
+=== Default scheme
+Identifiers following this scheme point to resources stored in the PDR's default resource store. 
+Currently, this is implemented as a store accessible through Pouchdb, named <userID>_entities.
 
-With the introduction of public contexts comes the notion of multiple stores for instances. Stores will be managed in a particular installation using a Perspectives model, that enables the user to associate a symbolic name with a particular storage endpoint. This association is unique to each user (each user can have her own mapping).
+=== Local scheme
+The local scheme allows us to store resources in _another_ database than the default resource store, albeit locally 
+(i.e. through Pouchdb with a non-url database name).
 
-Multiple instance stores means we have to decide, for any instance identifier, from which store to fetch it. We make this possible by having instance identifiers contain a reference to their store. To that end, we append the symbolic store name (a simple string) to the URI, separating it from the URI by a character that cannot be part of the GUID (we assume the pipe character here):
+=== Remote scheme
+The remote scheme allows us to fetch and store resources through some REST interface. 
+The URL represents the endpoint where we fetch and store resources. The resources themselves are stored using the <guid> part as key.
 
-`context:\{GUID}|MYOTHERSTORE`
+=== Public scheme
+The public scheme is just like the remote scheme. However, is is used exclusively to publish resources in a public Umwelt, or
+in other words, according to a public-facing perspective. It is possible to fill a role with an identifier in the public scheme. 
+Unlike the other schemes, the public scheme is preserved in deltas (the other identifiers are stripped to their guid parts,
+as the receivers themselves decide on where to store them).
+Note that the storage location of resources in the public: scheme is under control of the modeller. She can include the location 
+verbatim in the model, or she can specify an expression that allows the end users of the model to set it. But this is different from
+the control that the end user has over storage in the local and remote schemes (the latter can be set per user, while the former 
+is set once for all users).
 
-If no suffix is appended, the default local store is assumed. We call such identifiers Local Resource Identifiers, or LRI.
+=== Model scheme
+The model scheme form is designed to be equal to the model URI. It was introduced to be able to handle DomeinFiles through the 
+classes Persistent and Cacheable. 
 
-This means, however, that one user might have another identifier for an instance than another, as it is the end user's prerogative to decide where to store his instances. We cannot, therefore, consider such an identifier to be an URI (it is not universal!).
+== DomeinFile identifiers
+A model is identified by a URI:
 
-[quote]
-Moreover, the same store name might mean a different location for various users. In other words, store names are _indexed_.
+[code]
+----
+	model URI = 'model:' '//' Authority '#' LocalModelName
+	
+	Authority = dot-separated string parts
+	
+	LocalModelName = a string compatible with Couchdb filename rules
+----
 
-Luckily this is not a problem, because resources representing an instance are unique for a single user (various installations for the same user must, of course, use the same LRIs!). Resources are never shared as such (except for public resources, see below).
+We derive a name from that model URI to store a DomeinFile locally on a users PDR:
 
-However, peers communicate deltas that refer to instances. From the above we learn that we cannot use the LRI to construct a delta. Instead, we stick to the two schemes introduced above to identify resources in deltas. A peer receiving a delta to, say, create a context, must use type reflection to find out in which store to put it and will extend the received URI with the store's symbolic name.
+[code]
+----
+	DomeinFileName = Authority '-' LocalModelName.json
+----
 
-=== Public instance identification
+This is a name that is compatible with Couchdb file name rules. Why don't we just use the LocalModelName? Well, that may identify the model uniquely within the repository for a given namespace, but not so locally, where the end user collects models from all kinds of domains. There may very well be a model called 'Automotive' in two separate domains:
 
-Not all instances are private: some are public. We’ve seen above we identify them with URLs in a database whose name begins with cw_. It is, therefore, simple to distinguish private from public instances. They are recognisable by their scheme:
+* model://bigcars.com#Automotive
+* model://hobbies.org#Automotive
 
-* `context:\{GUID}` is a private context instance in the default private store;
-* `context:\{GUID}|MYOTHERSTORE` is a private context instance in another private store;
-* `https://perspectives.domains/cw_perspectives_domains/OurModels.json` is a public context instance that can be found at the given URL.
+Were we to store both under the name Automotive, this would cause no problem in the repository databases `models_bigcars_com` and `models_hobbies_org` on their respective servers, but it would cause a name conflict for an end user who wants to use both models because their filenames would both be `Automotive.json`.
 
-=== Determining the location of a public context: the default
+Why do we replace "#" with "-"? Both characters are allowed in URNs and thus in URLs and even in Couchdb file names, but in URLs the hash sign has a special interpretation: it separates the resource (file) name from an anchor. Hence, when we ask for a resource like `https://perspectives.domains/models_perspectives_domains/perspectives_domains#System.json`, Couchdb is requested to provide `https://perspectives.domains/models_perspectives_domains/perspectives_domains` which does not exist.
 
-The modeller can use the symbolic store names in a model text, to instruct the PDR to create public context identifiers at a specific location (remember that a public context is identified by an URL). Symbolic store names can be mapped onto concrete locations (i.e. couchdb databases) using screens generated from a yet-to-be-constructed model. For instance:
+We treat DomeinFiles as instances of classes Persistent and Cachable. The Persistent class requires its identifiers to be in the form specified as ResourceIdentifiers in module Perspectives.ResourceIdentifiers. These are strings that can be parsed into a DecomposedResourceIdentifier instance.
+
+We achieve this for DomeinFiles by having a scheme 'model:' (along with loc:, def:, remote: and public:). This means that
+
+- we can identify a DomeinFile with its full model URI w.r.t. Persistent and friends (in other words: the _id member contains the model URI);
+- the actual files are stored in the form specified above as DomeinFileName (but we never handle that name as such outside class Persistent and the module Perspectives.ResourceIdentifiers).
+
+Couchdb particulars: we serialise the DomeinFile using generic encoding. This results in a JSON structure with a member "contents" and a member "tag". However, Couchdb expects the members "_id" and "_rev", too. Just before storing the file, we add both members to the serialization. Both members are also part of the "contents". There is the following relation between both:
+
+* the inner "_rev" is always one behind the outer "_rev" (this is because Couchdb sets it on updating: Couchdb is in the lead. On retrieving the resource from Couchdb, we quickly set the inner "_rev" to the outers value);
+* the inner "_id" is the model URI, the outer "_id" is the DomeinFileName as defined above.
+	
+The model: scheme is implemented in such a way that all models are stored in a local database with a name that is composed from the system identifier and the suffix "_models".
+
+Class Cacheable will just store the DomeinFile under the full model URI.
+
+To prevent misunderstandings: *we should never reach out to a model in a repository using classes Persistent and Cacheable*.
+
+=== Looking up a type
+Consequently, when we have to look up, say, a context type, we split its identifier at the '$' character. The left part is a model URI. This we can send to getPerspectEntiteit directly and we will receive a DomeinFile either from cache or from the database.
+
+=== Saving a DomeinFile
+Likewise, when we add a new model to our local set of copies, we can use saveEntiteit with the model URI to store it.
+
+== Public instance identification
+
+By publishing a resource, we make available to the general public a specific perspective on that resource. Concretely, we associate the resource with an identifier in the RemoteScheme (see Scheme Based Design of Resource Identifiers), which allows any PDR to retrieve it from the internet.
+
+NOTE: We deliberately introduce an error here and that is that public resources should have an identifier in the RemoteScheme. It should not; it should be in the PublicScheme. This sections builds up to that conclusion.
+
+While we publish both context- and role instances, an end user will start by visiting a public context. In this context, he is given a Visitor role (not necessarily by that name) that is defined as a calculated role. The result of the calculation should be sys:Me (the indexed instance of sys:PerspectivesSystem$User).
+
+The modeller publishes a context using the following syntactical construct:
+
+[code]
+----
+  case CouchdbServer
+    external
+      -- The location of the CouchdbServer_.
+      property Url (String)
+      property Name (String)
+
+    publish at extern >> Url for Visitor
+      perspective on extern
+        props (Url, Name) verbs (Consult)
+----
+
+The keywords `publish at` should be followed by an expression that yields a Url in runtime, as evaluated with respect to the current context.
+On processing the ARC file, the PDR creates two roles with the given perspective:
+
+* a calculated Visitor role: user Visitor = sys:Me
+* an Enumerated role VisitorProxy, with a Calculated Property Url = extern >> Url
+
+Actually, for `publish at <loc> for <Name>`, it creates both <Name> and <Name>Proxy.
+
+Moreover, a context type with a `publish at` clause is marked as having a public facing perspective. 
+Whenever some user creates an instance of such a context type, his PDR creates an instance of the proxy role in it automatically. The instance has no filler, but it functions as a 'ghost' user that the PDR will create deltas for. 
+
+Either the initiator communicates that instance to other users, or each peer re-creating that context instance also re-creates the VisitorProxy instance.
+
+This does NOT mean that the user who created an instance of CouchdbServer, has specified that instances of this type are associated with the RemoteScheme, at the server located by Url. He may have stored his instance locally, in the default store, or any other place of his choosing. But it DOES mean that a _version of the CouchdbServer, as defined by the published perspective, is available at that location_.
+
+It also means that any other resources that a Visitor has access to according to this perspective, are stored there. Or at least, versions that the Visitor is allowed to see.
+
+It's almost as if there was a real user filling an instantiated VisitorProxy role in that context, whom the creator of the CouchdbServer instance synchronised with. As if the creator's PDR sent a Transaction with all deltas required to construct the resource versions, according to VisitorProxy's perspective. And as if VisitorProxy had ordained that resources of this type should be identified with the RemoteScheme and thus be saved to that particular location.
+
+Actually, that is pretty much how it is implemented. But instead of there being another PDR receiving the Transactions for Visitor, we have the creator's PDR do it for him, as it were impersonating the VisitorProxy. Transactions for VisitorProxy are caught just prior to sending them and then interpreted locally, making sure that the resources are saved at the remote location.
+
+=== Interpreting Transactions for VisitorProxy 
+MonadPerspectivesTransaction is defined as ReaderT (AVar Transaction) MonadPerspectives. Transaction has a member called typeSchemeMap and this contains associations between a resource type and a scheme for identifying its instances with. Almost always we have that member carry the local user's associations, but on interpreting a Transaction for the VisitorProxy role, we replace it with a scheme that maps any resource to RemoteScheme with a url value as calculated in VisitorProxy$Url.
+
+=== Switching to the Visitor perspective
+A user with access to a context that has a public facing perspective, may want to switch to the Visitor role so he can see things from that perspective. We actually have the user interface to do so. We can automatically detect that a context has such a perspective (remember we have marked the context type as such). This allows us to add GUI functionality to switch to the public perspective at once.
+
+Note that all peers in roles that have another perspective, will actually store the context and its roles privately (wherever they have ordained).
+
+Will these two versions not conflict? No, because resources are looked up *and cached* using their full (i.e. schemed) identifier. So a user might have the same context in his cache twice: once in a public version, once in his (the user's) private version. When looking at it from a public perspective, he will see different things (likely less than in his private role). But that is as it is meant.
+
+=== Making known where a public context can be found
+So far, we have only shown how those who have access anyway (in a non-visitor role) to a context with a public perspective can switch to the visitor role. How do we publish the existence (and location) of such a context?
+First, it should be really easy to obtain the url of such a context through the GUI. This allows us to use it as an ordinary link in an ordinary web page. Notice, however, that the plain url will not cause MyContexts to become active and capture it; to do so, we should add the url as an url argument to https://mycontexts.com.
+
+How do we include a link to a public context on a page displaying a user's perspective on another context? If the origin page is public, it is easy: the link identifier should automatically be in the RemoteScheme format. Note: we speak of 'link' but really it is a nested context role whose filler is a public context.
+
+However if the origin page is private, by default the filler of the nested context role will be in a format that leads to the user's local copy of it. This is a problem for enclosed contexts that should have lists of public contexts. This is rather common: think of the Repositories in MySystem.
+
+We can create a role instance with a public filler in an (automatic) action because we can say:
+
+[code]
+----
+	bind publicrole <expression> to RoleX
+----
+
+where <expression> can yield an identifier in the remote scheme. We can create a perspective with a property that can be filled with the plain url of a public context and then we can have an action create a role with the value of that property as the identifier of the filler. So peers can create links to public contexts in enclosed contexts.
+
+It can be easier than that. The author of an enclosed page might drop a role taken from a public context onto it, thereby creating a new role whose filler has the remote scheme. 
+
+=== When a Visitor adds a role to a public context
+Let's start out by noting that a Visitor should not have a perspective that allows her to modify the _public facing_ perspective on a context. However, should there be an unlinked role in the public context, she might be able to add an instance to that. The scope of that instance would be restricted to her own umwelt. But it might be shared, too, with for example the contexts' Author. He would then keep the instance in his own umwelt (the scope of the instance would include both this single Visitor and the Author). 
+Now think of the deltas the Visitor sends to the Author. It should include a ContextDelta. What shape does the identifier of the context take? Is it the full remote address, or just the guid? Since the Author keeps the instance in his own Umwelt, he gets to decide where to store it - so the delta should just have the guid. As a consequence, this situation is no exception to the general rule that says that deltas should be in terms of guids without their storage schemes.
+
+=== Dropping a private rol onto a public page
+A Visitor might drop a role from a closed context onto the public context and then create an (unlinked) role instance that is filled by it. For example, he might sign up by dropping his Me role in the Volunteer role drop zone. This will create a Volunteer instance filled by a private role; but notice that this Volunteer instance is not linked to from the public context. There may be (indeed, must be for this example to be useful) another role that has a perspective on Volunteer, e.g. Organizer, but then the new Volunteers PDR will send a delta to him or her describing the new Volunteer role and its filler. 
+The invariant is that there cannot be a role instance in a public facing perspective that is filled by a role from an enclosed context.
+
+=== The case for the 'public' scheme
+Above, I wrote that the author of an enclosed page might drop a role taken from a public context onto a private context, thereby creating a new role whose filler is public. If we adhere to the rule that a delta should be expressed entirely in terms of guids without their storage schemes, we run into a problem. The receiver of the delta may or may not have that filler role in his umwelt - and likely he has not, as the entire purpose of this excercise was to share a _public_ resource.
+
+The author's PDR should create a binding delta whose filler slot contains an identifier in the remote scheme. But how does it distinguish this situation from that of a role filled by a private role stored in the remote scheme?
+
+It cannot. Remember that, even though the filler role is available in a published perspective, it is not declared public itself in the model. The role *is* not public; it has *also been published*. So type reflection will not decide the issue. 
+
+Neither can it decide on grounds of the storage location. The Author may have that storage location in use to store his private copies of resources, or he may not. If he does not, he clearly intends to share a reference to a public resource. But if he has, we cannot know!
+
+There seems but one solution and that is to encode in the filler identifier itself that the author intends to refer to the version of its referred role that is in the Visitor (public) Umwelt. We could do this with a new scheme: 'public:'.
+
+It would be quite convenient if the role that was dropped was already identified in the public: scheme. But that seems to imply that *all* identifiers of resources in a public Umwelt should be in the public: scheme. And this is how we implement it. So, any resource that is to be available publicly, has an identifier in the public: scheme. All resources stored in a publicly accesible store on the internet have public: identifiers. Note, however, that for example the author of such a resource has stored it locally, for example with the default: scheme.
+
+The public: scheme is just like the remote: scheme, but for the scheme name itself. There is only one situation in which public: identifiers are created, and that is when a Transaction for a Proxy role is executed.
+
+The rule for deltas is then that all default:, local: and remote: schemed identifiers should be reduced to their guids, whereas the public: identifiers are not. 
+
+=== NAMESPACESTORE
+
+We have a special case called NAMESPACESTORE. It is mapped to the location of public contexts associated with the namespace of the type. Casu quo: sys:ModelManifest expands to model://perspectives.domains#System$ModelManifest and that, in turn is mapped onto `https://perspectives.domains/cw_perspectives_domains`.
 
 [code]
 ----
@@ -360,42 +515,9 @@ case ModelManifest public NAMESPACESTORE
 
 directs the PDR to create an instance of ModelManifest in whatever location its user has associated with the symbolic name NAMESPACESTORE.
 
-Actually, NAMESPACESTORE is a special case. It is mapped to the location of public contexts associated with the namespace of the type. Casu quo: sys:ModelManifest expands to model://perspectives.domains/System$ModelManifest and that, in turn is mapped onto `https://perspectives.domains/cw_perspectives_domains`.
+== The default repository
 
-=== Non-default locations of public contexts
-
-While that is perfectly usable for models in the perspectives.domains namespace (Generally authored by the Perspectives organization), it does not extend to authors that create models in other namespaces. For example, we expect to be able to fetch the ModelManifest of `model://joopringelberg.nl/JoopsModel` with the URL `https://joopringelberg.nl/cw_joopringelberg_nl/JoopsModel.json`.
-
-We handle this with an action that constructs the ModelManifest context and provides a calculated name for it, like so:
-
-[code]
-----
-user User (mandatory)
-  …
-  perspective on ModelManifests
-    in state ReadyToMake
-      action CreateModel
-        create_ context ModelManifest (Namespace + "/" + ModelName + ".json") bound to origin
-…
-context ModelManifests filledBy sys:ModelManifest
-  -- e.g. "JoopsModel"
-  property ModelName (String)
-  -- e.g. "model://joopringelberg.nl"
-  property Namespace (String)
-  
-  state ReadyToMake = (exists ModelName) and (exists Namespace) and not exists binding
-----
-
-The screen that is generated from these model fragments allows the author to enter a namespace – e.g. `model://joopringelberg.nl` – and a model name – e.g. `JoopsModel` – and then run an action that combines the two strings into the URL identifying the ModelManifest instance.
-
-A similar case exists for instances of Repository. A The author must be able to specify an arbitrary URL for a repository that she creates.
-
-[quote]
-There is a subtlety involved here: she needs to store the context that _describes_ a repository in some location that she has rights to write to; and she must register _in that description_ the location of a database that actually functions as a repository of model files.
-
-=== The default repository
-
-An InPlace installation cannot function without the system model. Moreover, every installation needs access to certain basic models (such as model://perspectives.domains/BrokerServices). These models and their manifests are stored in databases on the server `https://perspectives.domains`. This model database is described by an instance of Repository that is identified by (and located in) `https://perspectives.domains/cw_perspectives_domains/BaseRepository.json`. Fetching the system model is hardwired into the PDR.
+An InPlace installation cannot function without the system model. Moreover, every installation needs access to certain basic models (such as model://perspectives.domains#BrokerServices). These models and their manifests are stored in databases on the server `https://perspectives.domains`. This model database is described by an instance of Repository that is identified by (and located in) `https://perspectives.domains/cw_perspectives_domains/BaseRepository.json`. Fetching the system model is hardwired into the PDR.
 
 Part of the installation routine is to create an instance of `sys:PerspectivesSystem`. This instance is created complete with an instance of the role `sys:PerspectivesSystem$Repositories`, that is filled with this public repository.
 

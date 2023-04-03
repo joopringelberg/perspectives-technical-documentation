@@ -1,0 +1,92 @@
+[desc="A proxy to access the Perspectives Distributed Runtime from an HTML page."]
+== A proxy for the PDR
+
+=== Overview
+The Perspectives Distributed Runtime is accessed from an HTML page that runs in a browser. For most browsers (excepting Safari) we run the PDR in a SharedWorker process and its client HTML pages in their own (page) processes. They interact by exchanging messages through the https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API[Channel Messaging API].
+
+This level of communication is programmed in the package https://github.com/joopringelberg/perspectives-proxy[Perspectives Proxy]. The package provides several Javascript classes, some functions and a number of promises. The most important client-side facing are:
+
+* the `PerspectiveProxy` class, that holds an extensive API of functions to query the PDR and change state;
+* the function `configurePDRproxy`
+* the promise `PDRproxy` that exposes a PerspectivesProxy instance
+* the promise `SharedWorkerChannelPromise` that exposes the SharedWorkerChannel.
+
+=== Configuring the PDR proxy
+Each page that wants to connect to the PDR must create an instance of the PerspectiveProxy class. The creator of this class has a 'channel' parameter that must be bound to an instance of either `SharedWorkerChannel` or `InternalChannel` - the latter only for Safari.
+
+The page does so through calling `configurePDRproxy` with a string argument that signals what kind of Channel should be created.
+
+NOTE: Safari is the exception. The rest of this text is oriented to other browsers. The Safari case will be treated in its own paragraph at the end of this chapter.
+
+`configurePDRproxy` creates both a Channel instance and a PerspectivesProxy instance (and provides the former as argument to the latter's constructor). It also fulfills two promises: `PDRproxy` and `SharedWorkerChannelPromise`.
+
+=== SharedWorkerChannel and ChannelID
+The Channel classes handle the actual communication through the Channel Messaging API. The Channel instance stores the MessagePort instance that can be used to send messages to other processes (in our case, from the client page to the PDR). In the case of the SharedWorkerChannel, it receives that port by creating a SharedWorker with the script `perspectives-sharedworker.js`. Notice that only de FIRST page actually creates the SharedWorker (as a separate process) but that the others merely connect to it! Nevertheless, each page has its own instance of SharedWorkerChannel and its own MessagePort. Once the SharedWorkerChannel has been created, we resolve the SharedWorkerChannelPromise with it (using the sharedWorkerChannelResolver).
+
+Notice that the SharedWorkerChannel has the MessagePort that is the _client side endpoint_ of the connection between PDR and client page. So the SharedWorkerChannel uses its port to connect to the PDR that runs in a SharedWorker:
+
+* its `send` function calls its postMessage function, relaying calls to the PDR;
+* it puts an event handler on the onmessage property of the MessagePort it has received, listening for responses from the SharedWorker/PDR.
+
+==== ChannelID
+Each time a new Perspectives page creates its SharedWorkerChannel, it receives a ChannelID from the SharedWorker. The SharedWorkerChannel instance stores this and sends it along with each request to the PDR or SharedWorker. The SharedWorker uses this ID to send responses from the PDR to the right client page. The PDR itself has no notion of different clients; it is the SharedWorker that keeps them apart. This is entirely in line with the way the PDR works. It handles client calls that modificate Perspectives State in exactly the same way that it handles similar modifications from peers through the Transactions they send. It is quite democratically in that respect!
+
+==== Calling and receiving responses: Correlation identifiers
+It is important to realise that the SharedWorker communicates _out of process_ with the PDR. So it performs a kind of _remote procedure call_ through the Messaging API. All functions in the PerspectivesProxy API expect a response, but because of the out of process character we must treat them as _asynchronous_ functions (they either take a callback or return a promise and this translates to a callback under the hood). The SharedWorker class takes care of all callback functions, storing them internally with a key called a `Correlation Identifier`. The Correlation Identifier is sent along to the SharedWorker/PDR and when it returns a result, the Correlation Identifier will be part of it. The SharedWorker class then selects the associated callback function and applies it to the result.
+
+All this is transparent from the perspective of the PerspectivesProxy class. It just delegates calls to its Channel, sending the client-supplied callbacks along and never thinks about then again.
+
+==== Handling PDR responses
+The PDR exposes two APIs:
+
+* one defined in the module `Perspectives.Api`. These are functions to query Perspectives State or to modify it.
+* one loosely defined in the `Main` module of the PDR. These are functions to start the PDR, to register a new account, etc. All these 'housekeeping' functions return promises to the client. They are one-time-only functions.
+
+==== Streams versus one-time-only responses
+A modification to Perspectives State should be made just once and will return a success or failure message (its format depending on the nature of the call). In contrast, a query returns a result that depends very much on the current state of affairs. Whenever that changes, the client wants to be informed. Hence, we can regard the result of a query call through the proxy as a _stream_ of responses at successive moments in time, as measured by relevant state change. 
+
+This translates, in the Channel classes, to callbacks that are registered to be used just once or to be called again and again. The Channel `send` function has a parameter `fireAndForget` that decides this. The value to this parameter is supplied by the various functions in the PerspectivesProxy API.
+
+There may be circumstances that the client is not interested in any updates on a query result. It may call the query function with a value FIREANDFORGET to have the Channel classes treat it like a one-time-only call.
+
+Those API functions that are one-time-only by their nature return a promise and do not take a callback. All others take a callback.
+
+NOTE: In the future we may replace the callback interface with a Stream-like abstraction.
+
+=== SharedWorker
+The SharedWorker faces towards the PDR. It comes into being when a client (let's say a page) calls the 'new' constructor on 'SharedWorker'. The first page actually causes a new process, whereas the next page merely connects to the now existing SharedWorker. Hence 'shared'!
+
+It is important to understand that when this new process is created, the PDR does not start running immediately. The client initiates the PDR by calling the runPDR function of the SharedWorkerChannel. 
+
+When a page actually creates a SharedWorker from its script, an event is raised at the SharedWorkerGlobalScope in the SharedWorker: the 'connect event'. The same happens when the next page connects to the now existing SharedWorker. The script 'perspectives-sharedworker.js' handles this event by creating a new ChannelID and sending it through the port that represents its end of the Channel between PDR and this client. The SharedWorkerChannel instance (facing towards the client) stores it internally.
+
+The SharedWorker faces a problem similar to the SharedWorkerChannel: it communicates directly (through function calling) with an in-process program and at the same time communicates through the Channel Messaging API with an out-of-process program.
+
+The PDR is itself a highly asynchronously operating program. The SharedWorker handles this asynchronous character by providing callback functions to the Perspectives.API. It constructs these functions itself and what they do is this:
+
+* it selects the right MessagePort to send a PDR reply to, based on the ChannelID;
+* it returns the PDR result through that port, identifiying it with its Correlation Identifier.
+
+When received by the SharedWorker channel instance, the Correlation Identifier is used to retrieve the _original callback function provided by the client_. It finally is applied to the result created by the PDR.
+
+==== Connection to the PDR: the InternalChannel
+The PDR operates on a stream of requests that flow in from the various clients. All requests are coming in on the same stream. This stream is created when the PDR calls the function `createRequestEmitterImpl`, provided by the package perspectives-proxy.js. The PDR does this when starting up.
+
+Now this function creates an instance of the class InternalChannel. It provides its constructor with three functions supplied by the PDR. The first two are stream data constructor functions. The third is an `emit` function that should be called with a stream data element. Whenever the InternalChannel calls `emit`, the stream in the PDR emits another element to be processed by the module Perspectives.API.
+
+==== A dance in four steps
+Summing up, this is how the entire process is booted on the SharedWorker/PDR side:
+
+* the client starts the SharedWorker. Through the SharedWorkers onConnect event, it establishes connection through the Messaging Channel API with the client. The SharedWorker, however has not yet started the PDR and thus cannot relay requests from clients yet;
+* the client then instructs the SharedWorker to start the PDR;
+* the PDR calls `createRequestEmitterImpl` as part of its startup routine, which constructs the InternalChannel instance and fulfills the InternalChannelPromise.
+* only then is the InternalChannel ready to relay requests from the clients to the PDR.
+
+=== Tracing the entire process from client to PDR and back
+
+* The client initiates the process by calling one of the functions exposed by PerspectivesProxy.
+* PerspectivesProxy delegates the request to its Channel, including the callback function provided by the client or a callback function it has constructed itself to fulfill the promise returned by PerspectivesProxy.
+* The Channel send function constructs a Correlation Identifier, stores the callback and sends a serialised version of the request, including the Channel ID and the Correlation Identifier, through the Messaging API.
+* The SharedWorker receives that serialised request. It creates its own callback function that encapsulates both the ChannelID and the Correlation Identifier. It calls the `emit` function provided by the PDR, sending its self-constructed callback function along.
+* The PDR interprets the serialised request and constructs an answer. It calls the callback function, which in turn serialises the answer and sends it through the Messaging API (using the Channel ID in the response to select the right MessagePort).
+* The SharedWorkerChannel (on a client side), listening on its MessagePort, receives the result. Using the Correlation Identifier included in the result, it selects the original callback function and applies it to the result. The callback function fulfills a promise or does something to React State, updating the screen.
