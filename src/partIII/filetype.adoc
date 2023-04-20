@@ -1,0 +1,210 @@
+[desc="A property range type `file` to handle files in Perspectives."]
+= The range type PFile
+
+Role properties are said to be in a `Range`. We support some run of the mill ranges like string, boolean and number (respectively PString, PBool, PNumber). However, we also support PFile as a way to handle files that can be uploaded and downloaded from Perspectives screens.
+
+The PFile type is declared as a Purescript String. However, the values of these strings can be parsed to the following newtype:
+
+[code]
+----
+type PerspectivesFile = 
+  { name :: String                  -- The name associated with the file on creating or uploading it. Use only client side.
+  , mimeType :: MIME
+  , database :: Maybe String        -- The database where the role instance is stored. 
+  , roleFileName :: Maybe String    -- The name of the role instance document. 
+  }
+
+----
+
+Properties that have range File *must be functional*.
+
+We use PFile in a very limited way in expressions and statements:
+
+* there is no literal syntax for a file. I.e., it is not possible to write a statement to assign a literal value to a property declared as File.
+* we do support a createFile statement, however (see below)
+* and we support two functions on PFile: `fileName` and `mimeType`. These allow us to filter sequences of files.
+
+== A pattern to restrict MIME types
+In a model, one can add a pattern to a PFile definition:
+
+[code]
+----
+    thing Thee
+      property Beschrijving (File)
+        pattern = "text/arc" "Only .arc files (Perspectives Language source files) are allowed, so use `text//arc."
+----
+
+The pattern will be applied by the React component (see below) to the values the user enters for mime types.
+
+== Creating a file in an assignment statement
+We have the following assignment statement to create a file:
+
+[code]
+----
+create file <Name> as <MimeType> in <PropertyIdentifier> [for <RoleExpression>]
+	<Contents>
+----
+
+The parameters Name, MIME and Contents expect a value that is written as a string, i.e. enclosed in double quotes. This is because each of them can contain characters that also function as identifier delimiters (such as a space).
+The name can be any string that conforms to the file system's conventions for file names. It includes an extension. The mime parameter should conform to the conventions described in https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types[MIME types on MDN]. The optional contents are useful only for text MIME types.
+
+RoleExpression is optional when the expression is applied in such a way that the `current object` is a role instance, which is the case 
+
+* in the state transition of a role (so, in the `on entry` or `on exit` clause of the role type that has the File property)
+* in an action, when the `current object` is defined:
+** in the body of a `perspective on` clause (on the role type that has the File property);
+** in the role definition of the role type that has the File property.
+
+Some examples:
+
+[code]
+----
+-- With a RoleExpression (`origin` is defined as the instance of R due to the perspective):
+
+thing R
+  property Model (File)
+  
+user X
+  perspective on R
+    action MakeFile
+      create file "myModel.arc" as "text/arc" in Model for origin
+        "domain model://perspectives.domains#MyModel"
+
+-- RoleExpression can be left out in the definition of the role with the File property:
+
+thing R
+  property Model (File)
+  perspective of X
+    action MakeFile
+      create file "myModel.arc" as "text/arc" in Model
+        "domain model://perspectives.domains#MyModel"
+
+-- It can also be omitted in (an automatic action in) the state transition of the role with the File property:
+
+thing R
+  property Model (File)
+  on entry
+    do for X
+      create file "myModel.arc" as "text/arc" in Model
+        "domain model://perspectives.domains#MyModel"
+----
+
+Obviously, each parameter can be supplied an argument value with an arbitrary String expression.
+
+NOTE: Creating files is particularly useful for text MIME types, such as text/html or text/arc (our unofficial type for PL source files).
+
+== Allowed MIME types
+We apply a regular expression to candidate MIME strings:
+
+[code]
+----
+^[^\./]+\/[^\./]+$
+----
+
+The regex is applied to the second argument of `createFile`. It is also applied to input entered in the MIME field in the PerspectivesFile React Component.
+
+== Allowed file names
+We apply a regular expression to candidate filename strings:
+
+[code]
+----
+^[^\./]+\.[^\./]+$
+----
+
+The regex is applied to the first argument of `createFile`. It is also applied to input entered in the fileName field in the PerspectivesFile React Component.
+
+
+== Selecting files based on their name or MIME type
+We support two selector functions available in expressions on values of type File:
+
+[code]
+----
+fileName :: File -> String
+mimeType :: File -> String
+----
+
+This allows us to filter a sequence of files like this:
+
+[code]
+----
+thing MyFiles (relational)
+  property TheFile (File)
+
+thing OnlyArcFiles = filter MyFiles with TheFile >> mimeType == "text/arc"
+----
+
+NOTE: the selectors are not yet implemented.
+
+
+== How files are stored
+File storage comes in two flavours: private and public. A user's PDR stores a file that he uploads privately, if there are no other roles with a perspective on the File Property. However, if there are peers that the file should be shared with, it is stored publicly - that is, if the user has a public file storage registered in Perspectives (do not confuse this with a public perspective, see below). If not, the file is stored privately but the File Property is *not* synchronized with peers.
+
+This is because we cannot send large amounts of data through the channel that we use to synchronize with peers. Instead, we must send file attachments as *claim data*; references to the actual data.
+
+There is one exception to the latter case and that is for a _public perspective_. By construction, role instances in a public perspective are accessible to all users and so are any files attached to a role instance. 
+
+What about a peer who has himself registered public file storage? Should we not share the file with her, too, like with a public perspective? But no. The public perspective case is special because _the modifying peer actually modifies the public resources, too_. 
+
+NOTE: Currently, only private storage is supported - and public perspectives.
+
+Couchdb supports file attachments on documents. We store the actual file associated with a Property of type File in an attachment _that has the same name as the Property_! So, in the example above, each instance of MyFiles would have an attachment named "TheFile", even though the individual files may have different names. This makes it possible to upload a file "cat.jpg" to one instance and "dog.jpg" to another, while both are stored as an attachment named "TheFile" with their respective role documents. The original file names are stored as part of the Property value.
+
+The database name and the name of the role instance resource that holds the stored attachment, whether it be in a public store or a private one, are saved in the property value. They are two of the fields of the serialised JSON object stored as the property value. 
+
+The interface that actually accesses Pouchdb from the PDR has been changed in the course of implementing PFile, to preserve attachments on role resources. The main thrust of the change is that we now preserve the attachment info that Couchdb adds to the resource files; otherwise, on updating a role, the attachments will be discarded.
+
+== Handling files client side
+Most of the interesting stuff pertaining to files goes on client side. We display a property of range File on a screen using the custom PerspectivesFile React Component. Outline:
+
+* users can up- and download files through the PerspectivesFile interface. The component accesses the file attachments through the API of the PDR.
+* users can create a new file instance through this interface by uploading or by providing a file name and mime type. It is not possible to create content through the interface; an empty attachment will be created. 
+
+For `image` MIME types, the component shows the image; for `text/arc` mime types, it shows the source text with syntax coloring.
+
+== The PerspectivesFile React Component
+A quick specification. The component has four states:
+
+* empty
+* filled
+* readonly
+* editable
+
+The *empty* state displays a name field and a MIME type field, both plain string types (but only values that match the regular expression mentioned above are accepted as MIME type). It also displays an upload icon button. When a name and MIME type are entered for the first time, the control creates and stores a new file. The state then becomes `filled`. In the empty state, the component also functions as a dropzone (one can drop a file on it).
+
+* On tabbing into the control, by default, the cursor will be in the name field (other than in *filled* state, the control does not have to be unlocked for editing when *empty*)
+* press `right arrow` to move to the MIME field. Changes to the name will be preserved temporarily. Pressing `right arrow` again will focus on the upload icon button; pressing `right arrow` again moves the cursor back to the name field; changes to the MIME field are preserved temporarily.
+* Press `space` when the focus is on the upload button to open the file selector dialog.
+* Press `escape` to discard all changes.
+* Press `enter` while in any field to actually save changes and to move the control to *filled* state. 
+
+NOTE: The use of the left-arrow key is consistent with the way one can move through a table. However, as a consequence, one cannot move through _the text_ that has been entered in the control with the left-arrow key.
+
+The *filled* state shows the name and mime type (and neither is editable). In this state, the control is draggable if a url is available (the payload will be a standard HTML File object). It is also a dropzone for such objects. 
+
+NOTE: the draggable interface has not yet been implemented.
+
+* The control state can be moved from *filled* to *editable* by selecting it and then pressing `enter`. The cursor will then be in the name field. The MIME value cannot be edited.
+* The download button can be selected if a url is available.
+* Press `space` on the download button to activate it.
+
+*readonly* is like *filled*, but without the possibility to move to *editable*. If there is an url in the property value, the end user will be able to download the file.
+
+When *editable*, the control displays two buttons: one to download the file, one to upload it. Both can be activated by selecting and pressing `space`. The name of the file may be changed; its MIME type cannot. Move from button to button or field by pressing `left arrow`. 
+
+* Uploading a file will move the control back to *filled* state (after preserving changes).
+* Pressing `enter` will preserve a change to the file name and move the control back to *filled* state.
+* Pressing `escape` will discard changes and move the control back to *filled* state.
+
+NOTE: When the user has not yet changed the file name, pressing `enter` has no effect. Press `escape` to leave the control.
+
+In all states, the download button is only enabled if the control has a value for the database for the file. This will be 
+
+* after creating a new file and 
+* after uploading a file 
+* when the property value coming through the PDR API contains the serialised structure that contains a database value.
+
+== Storing files through the PerspectivesProxy
+We use the API function `setProperty` to store the file name and mime type. But to save the actual file, we have to call another function provided by the PerspectivesProxy: `saveFile`. 
+
+NOTE: Please observe that changes are only persisted after pressing `enter` or after dropping a file!
+
