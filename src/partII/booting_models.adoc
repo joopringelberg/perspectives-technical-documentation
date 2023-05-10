@@ -1,22 +1,22 @@
 [desc="How to author a model and take care of indexed contexts and roles."]
 = Booting models
 
-A Perspectives Distributed Runtime installation – e.g. as included in InPlace – needs Perspectives Models to operate. The basic requirement is `model://perspectives.domains/System`. This model is retrieved automatically from the website perspectives.domains while installing InPlace. However, the end user will want to acquire more perspectives and thus needs to add models.
+A Perspectives Distributed Runtime installation – e.g. as included in MyContexts – needs Perspectives Models to operate. The basic requirement is `model://perspectives.domains/System`. This model is retrieved automatically from the website perspectives.domains while installing MyContexts. However, the end user will want to acquire more perspectives and thus needs to add models.
 
 This text explains how this is achieved in the PDR.
 
 == Models
 
-Conceptually, a model is a collection of types. Physically, it is a file (the _domeinfile_). Models reside physically in a repository on a server on the internet. A PDR installation (such as InPlace) keeps a private collection of models, usually locally.
+Conceptually, a model is a collection of types. Physically, it is a file (the _domeinfile_). Models reside physically in a repository on a server on the internet. A PDR installation (such as MyContexts) keeps a private collection of models, usually locally.
 
 End users want to extend their perspectives and therefore need to be able to explore models published by authors. To this end, we have the context type Manifest. Instances of this type are public contexts.
 
 End users also need an overview of locally available models. These are currently collected in the end user's instance of the sys:PerspectivesSystem context. This is an _indexed context_, meaning the user can access it by entering its name in the address bar of the browser.
 
 [quote]
-Its full name would be model://perspectives.domains/MySystem. However, InPlace applies fuzzy matching to names, so MyModels stands a good chance to land you in the right place.
+Its full name would be model://perspectives.domains/MySystem. However, MyContexts applies fuzzy matching to names, so MyModels stands a good chance to land you in the right place.
 
-But the MySystem context can be accessed from the menubar of InPlace, anyway. It is accessible through the Home icon.
+But the MySystem context can be accessed from the menubar of MyContexts, anyway. It is accessible through the Home icon.
 
 An end user whose installation does not yet have this model, will acquire it automatically upon visiting the description. (S)he then can boot the model by executing an action on the screen.
 
@@ -38,7 +38,7 @@ Acquiring `model://perspectives.domains/Models` is different from other models i
 
 === Booting System
 
-As stated above, model://perspectives.domains/System is a requirement for a PDR installation to operate. We cannot use a client such as InPlace to acquire this model. Hence, on installing InPlace, System is installed by the code that runs InPlace. At that time, we do not have an instance of MyModels; indeed we do not even have `model://perspectives.domains/Models`! As a consequence, System is not listed in MyModels.
+As stated above, model://perspectives.domains/System is a requirement for a PDR installation to operate. We cannot use a client such as MyContexts to acquire this model. Hence, on installing MyContexts, System is installed by the code that runs MyContexts. At that time, we do not have an instance of MyModels; indeed we do not even have `model://perspectives.domains/Models`! As a consequence, System is not listed in MyModels.
 
 System differs from other models in another respect. It’s indexed names (MySystem and Me) are hard-coded and they are not listed in MySystem.
 

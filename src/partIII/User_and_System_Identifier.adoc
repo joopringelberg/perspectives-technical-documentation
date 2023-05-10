@@ -7,7 +7,7 @@ WARNING: This text is not entirely up to date. The area is currently in developm
 
 == The origin of the system identifier
 
-When InPlace is first fired up on a computer, Couchdb is supposed to be in PartyMode. The user, having no account, enters a username and a password of her choice. The PDR then calls the function setupCouchdbForFirstUser. This function will, eventually, generate a guid that will be the base of the system identifier. However, for now, during development, for easy testing, we just use the user identifier that the user just typed in. In this text we call it the systemIdentifier.
+When MyContexts is first fired up on a computer, Couchdb is supposed to be in PartyMode. The user, having no account, enters a username and a password of her choice. The PDR then calls the function setupCouchdbForFirstUser. This function will, eventually, generate a guid that will be the base of the system identifier. However, for now, during development, for easy testing, we just use the user identifier that the user just typed in. In this text we call it the systemIdentifier.
 
 We also have a function setupCouchdbForAnotherUser. Like for the first user, it will in the end generate a guid but now just uses the user name provided to one of its parameters.
 

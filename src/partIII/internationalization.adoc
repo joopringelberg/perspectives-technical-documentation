@@ -1,10 +1,10 @@
-[desc="Preparing the PDR and InPlace for multiple languages"]
+[desc="Preparing the PDR and MyContexts for multiple languages"]
 = Internationalization (I18n) and Localization (L10n)
 
-For obvious reasons, an end user should be able to select the language used in InPlace. This is called _localization_ (L10n). To prepare a program such that it can be localized, is called _internationalization_ (L18n).
+For obvious reasons, an end user should be able to select the language used in MyContexts. This is called _localization_ (L10n). To prepare a program such that it can be localized, is called _internationalization_ (L18n).
 
 == What texts should be translatable?
-First of all we note that the immediately visible user interface parts of InPlace hardly have any readable text at all, with the exception of:
+First of all we note that the immediately visible user interface parts of MyContexts hardly have any readable text at all, with the exception of:
 
 * text in the tabs that are visible before the user has logged in (the login dialog, the create account dialog and the remove an account dialog);
 * tooltips of the icons in the toolbar.
@@ -25,28 +25,28 @@ I have decided to implement internationalization with the library https://www.i1
 == Dynamic loading of language resources
 One typically doesn't want to load all available translations at once, but only on demand. I have implemented this by dynamically importing a language resource using an async function and the `import` function. This causes Webpack to split the output in multiple parts, one for each language resource. I prefer this above using the http backend because Webpack handles the splitting and distribution to the output directory and also the loading. 
 
-== InPlace and perspectives-react
-Quite a few messages originate in React components delivered by `perspectives-react`. The corresponding modules import i18next on their own in order to have access to the translation function. However, it required some special attention for Webpack configuration in order to ensure that modules in the InPlace package and modules in the perspectives-react package actually share the same i18next object.
+== MyContexts and perspectives-react
+Quite a few messages originate in React components delivered by `perspectives-react`. The corresponding modules import i18next on their own in order to have access to the translation function. However, it required some special attention for Webpack configuration in order to ensure that modules in the MyContexts package and modules in the perspectives-react package actually share the same i18next object.
 
-Initialization of this object is done in InPlace, in the constructor of the App. This is the outline of how it works:
+Initialization of this object is done in MyContexts, in the constructor of the App. This is the outline of how it works:
 
 * the `perspectives-react` Webpack configuration declares i18next to be **external**
-* the `InPlace` Webpack configuration declares an alias for i18next:
+* the `MyContexts` Webpack configuration declares an alias for i18next:
 
   "i18next": path.resolve(__dirname, "node_modules/i18next")
 
 Furthermore, in `package.json` of perspectives-react I've declared i18next to be a peer-dependency.
 
-== Namespaces for InPlace and perspectives-react
-I wanted to be able to create language resource files in both projects. Accordingly, I put the translations in perspectives-react in a namespace **preact** and those in InPlace in the namespace **inplace**.
+== Namespaces for MyContexts and perspectives-react
+I wanted to be able to create language resource files in both projects. Accordingly, I put the translations in perspectives-react in a namespace **preact** and those in MyContexts in the namespace **mycontexts**.
 
 To make sure that Webpack would split the language resources into seperate chunks for perspectives-react, I have included an async function that dynamically loads a language resource file.
 
-However, this setup creates a runtime problem. This async function loads a resource that is rooted in a dependency, from the point of view of the InPlace package. In other words, the chunks split off by Webpack for perspectives-react do not make it unassisted to the output directory that is filled by Webpack for InPlace. To ensure that those language resources end up in the InPlace output directories, I deploy the copy-webpack-plugin in the InPlace Webpack configuration.
+However, this setup creates a runtime problem. This async function loads a resource that is rooted in a dependency, from the point of view of the MyContexts package. In other words, the chunks split off by Webpack for perspectives-react do not make it unassisted to the output directory that is filled by Webpack for MyContexts. To ensure that those language resources end up in the MyContexts output directories, I deploy the copy-webpack-plugin in the MyContexts Webpack configuration.
 
 == To add a language
 Adding a language is simple:
 
 * create the language resource files for both namespaces in the new language (copy an existing language and translate!);
-* add the language to the i18next init function call in the file `i18next.js` in InPlace.
-* rebuild InPlace.
+* add the language to the i18next init function call in the file `i18next.js` in MyContexts.
+* rebuild MyContexts.

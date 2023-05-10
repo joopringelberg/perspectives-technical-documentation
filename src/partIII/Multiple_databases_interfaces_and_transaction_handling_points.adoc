@@ -1,8 +1,8 @@
 [multipage-level=3]
-[desc="A single user might have several devices she wants to use InPlace with. In this chapter we discuss the intricacies involved in that for the distributed application the PDR is."]
+[desc="A single user might have several devices she wants to use MyContexts with. In this chapter we discuss the intricacies involved in that for the distributed application the PDR is."]
 = Multiple databases and devices
 
-We can analyse the InPlace application in terms of three parts:
+We can analyse the MyContexts application in terms of three parts:
 
 * an interface (graphical, as it is, but not necessarily so),
 * a database
@@ -43,7 +43,7 @@ To prevent misconceptions, please remember that each user keeps his own stuff. T
 
 InPlace v0.7.0 stores all data in a single Couchdb instance on the local computer of the end user. What might be reasons for changing that? Here are three use cases:
 
-* InPlace-in-the-cloud: a user decides to store his data with a service at some endpoint on the internet, for reasons of availability, safety, whatever.
+* MyContexts-in-the-cloud: a user decides to store his data with a service at some endpoint on the internet, for reasons of availability, safety, whatever.
 * A home server, with more capacity than, say, a mobile phone.
 * The wish to store some entities, e.g. relating to a particular domain such as insurances, with a third party while keeping other data local.
 
@@ -113,13 +113,13 @@ Actually, the PDR v0.7.0 is fully prepared for multiple GUI’s. In the near fut
 
 == Multiple devices
 
-Useful as multiple UI’s can be, in order to be able to use InPlace seamlessly on both laptops and mobiles, for example, another setup is required. One such setup would be to run a THP as a service and just run the clients locally. While this is perfectly defendable, scaling the service might become a challenge as a generic THP is quite resource-hungry.
+Useful as multiple UI’s can be, in order to be able to use MyContexts seamlessly on both laptops and mobiles, for example, another setup is required. One such setup would be to run a THP as a service and just run the clients locally. While this is perfectly defendable, scaling the service might become a challenge as a generic THP is quite resource-hungry.
 
 Another setup would be to run UI and THP locally but store data in a place that can be accessed from multiple devices. Again, a commercial service on the internet might be a solution; but so might be a home server.
 
 === Database subscription service required
 
-However, this introduces another functional requirement for the database (and some extra handling by the THP). This is because InPlace operates according to a _what you see is what you have_ principle. To be more precise: the contexts and roles visible on screen are guaranteed to be a faithful representation of the state of that part of the Perspectives Universe.
+However, this introduces another functional requirement for the database (and some extra handling by the THP). This is because MyContexts operates according to a _what you see is what you have_ principle. To be more precise: the contexts and roles visible on screen are guaranteed to be a faithful representation of the state of that part of the Perspectives Universe.
 
 Now consider the situation where an end user enters, for example, an utterance in a chat, using his mobile phone. Were his laptop to show the same chat, his words would not appear automatically there, too. This is because the update of the GUI is driven by transactions. Let’s delve into this a little deeper.
 

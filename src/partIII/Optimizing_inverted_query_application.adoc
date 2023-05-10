@@ -15,14 +15,14 @@ Referring to Figure 1, we see that onRoleDelta_binder of r2 holds two inverted q
 
 [code]
 ----
-binder r5 >> binding context I
+binder r5 >> binding context         I
 
-context II
+context                              II
 ----
 
-Now consider a RoleDelta with binder (id) equal to (an instance of) r1 and binding equal to (an instance of) r2. It is obvious that only inverted query II should be applied (the new path will never lead to c4, as it must include the new binding between r1 and r2).
+Now consider a RoleDelta with binder (id) equal to (an instance of) r1 and binding equal to (an instance of) r2. It is obvious that only inverted query II should be applied (to r1) (the new path, having the connection between r1 and r2, will never lead to c5).
 
-The query evaluation mechanism currently is implemented in such a way that applying II to r1 will give no results, so the semantics is preserved. We can safely skip this step, however.
+The query evaluation mechanism currently is implemented in such a way that applying I to r1 will give no results, so the semantics is preserved. We can safely skip this step, however.
 
 == Solution
 

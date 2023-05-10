@@ -77,7 +77,7 @@ state <identifier> = <booleanQuery>
     notify "Entering state X."
 ----
 
-This will cause the system (i.e. the combination of the Perspectives Distributed Runtime (PDR) and the end user application, InPlace) to bring this state change to the end users’ attention (the string may contain queries that must evaluate to string values).
+This will cause the system (i.e. the combination of the Perspectives Distributed Runtime (PDR) and the end user application, MyContexts) to bring this state change to the end users’ attention (the string may contain queries that must evaluate to string values).
 
 This governs the first use of states: notification. No more is needed to bring state changes to the end users attention.
 
@@ -185,13 +185,13 @@ If the modeller specified, say, state entry notification for state S of context 
 
 In other words: we keep a list of contexts annotated with notification level (and another for roles). A client program can request these role instances through normal API calls; so when I is added to ContextNotification, the client will be updated.
 
-It is up to the end user program to determine how to actually alert the end user. It may throw up a screen alert, for example. Handling notifications is part of the framework provided by InPlace; it is not the responsibility of the screen programmer of a particular app (model).
+It is up to the end user program to determine how to actually alert the end user. It may throw up a screen alert, for example. Handling notifications is part of the framework provided by MyContexts; it is not the responsibility of the screen programmer of a particular app (model).
 
 === Notification life cycle
 
 What happens to a notification when it has been shown to the end user? For some notifications, just showing it once may be good enough. This may suffice for notifying the end user that a chat partner has entered a context. This means that the PDR does not remember contexts that entered the triggering state; after the end user program has received updates, they are discarded.
 
-But for others it might be better to keep them in a list the end user can choose to inspect, until he actively dismisses them. This may be appropriate for reminders to reply to an email; indeed, the very idea of a to-do list is modelled this way. Such notifications should survive the end of a session with InPlace.
+But for others it might be better to keep them in a list the end user can choose to inspect, until he actively dismisses them. This may be appropriate for reminders to reply to an email; indeed, the very idea of a to-do list is modelled this way. Such notifications should survive the end of a session with MyContexts.
 
 So, for notifications we have two dimensions:
 

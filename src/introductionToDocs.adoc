@@ -6,7 +6,7 @@
 :url-inplaceuserguide: https://joopringelberg.github.io/perspectives-documentation/userguide.html
 :url-inplaceissues: https://github.com/joopringelberg/inplace/issues
 :url-reference: https://joopringelberg.github.io/perspectives-documentation/perspectives%20language%20reference.html
-:url-tutorial: https://inplace.works/gettingstarted/overview.html
+:url-tutorial: https://mycontexts.com/gettingstarted/overview.html
 
 This documentation grew out of some 50 design documents written over the course of the years from 2016 to 2022. They were first integrated into this single document in oktober 2022, made possible by a grant from the NGI ZERO Search program through the {url-nlnet}[NLnet] organization.
 
@@ -37,7 +37,7 @@ PART II is devoted to the _design_ of the Perspectives Language. It ranges from 
 
 PART III goes into the nitty-gritty of the implementation. Expect the most technical issues here. We cover:
 
-* The architecture of the PDR and InPlace
+* The architecture of the PDR and MyContexts
 * The mechanisms of state change
 * The workings of state synchronization between peers
 * The Foreign Function Interface (FFI)
@@ -47,9 +47,9 @@ There are quite a few other resources on the Perspectives project.
 
 * The starting page for all https://joopringelberg.github.io/perspectives-documentation/[Perspectives documentation].
 
-* The https://joopringelberg.github.io/perspectives-documentation/userguide.html[InPlace User Guide], which is more of a reference.
+* The https://joopringelberg.github.io/perspectives-documentation/userguide.html[MyContexts User Guide], which is more of a reference.
 
-* https://inplace.works/gettingstarted/overview.html[A small tutorial] to get started.
+* https://mycontexts.com/gettingstarted/overview.html[A small tutorial] to get started.
 
 * https://joopringelberg.github.io/perspectives-documentation/perspectives%20language%20reference.html[Reference of the Perspectives Language]
 

@@ -517,7 +517,7 @@ directs the PDR to create an instance of ModelManifest in whatever location its 
 
 == The default repository
 
-An InPlace installation cannot function without the system model. Moreover, every installation needs access to certain basic models (such as model://perspectives.domains#BrokerServices). These models and their manifests are stored in databases on the server `https://perspectives.domains`. This model database is described by an instance of Repository that is identified by (and located in) `https://perspectives.domains/cw_perspectives_domains/BaseRepository.json`. Fetching the system model is hardwired into the PDR.
+An MyContexts installation cannot function without the system model. Moreover, every installation needs access to certain basic models (such as model://perspectives.domains#BrokerServices). These models and their manifests are stored in databases on the server `https://perspectives.domains`. This model database is described by an instance of Repository that is identified by (and located in) `https://perspectives.domains/cw_perspectives_domains/BaseRepository.json`. Fetching the system model is hardwired into the PDR.
 
 Part of the installation routine is to create an instance of `sys:PerspectivesSystem`. This instance is created complete with an instance of the role `sys:PerspectivesSystem$Repositories`, that is filled with this public repository.
 
@@ -528,11 +528,11 @@ NOTE: Document should be updated below this point.
 
 == Cross Origin Resource Sharing
 
-The ‘same origin policy’ implies that a script is allowed to request resources just from the same domain it itself is served (see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS). The PDR is served from https://inplace.works. This would imply that the PDR could only request models (and other resources) from that same domain. It would preclude the repositories at arbitrary locations as described in this document.
+The ‘same origin policy’ implies that a script is allowed to request resources just from the same domain it itself is served (see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS). The PDR is served from https://mycontexts.com. This would imply that the PDR could only request models (and other resources) from that same domain. It would preclude the repositories at arbitrary locations as described in this document.
 
-However, a server may be configured such that it sends CORS headers. Couchdb supports such configuration. Part of that configuration is to declare a set of _origin domains_. In our case, that would be https://inplace.works.
+However, a server may be configured such that it sends CORS headers. Couchdb supports such configuration. Part of that configuration is to declare a set of _origin domains_. In our case, that would be https://mycontexts.com.
 
-Every hosting party that supplies a Couchdb server for repositories, should therefore configure CORS in the same way. As a consequence, PDR sources, served from https://inplace.works, are allowed to see resources served from such servers.
+Every hosting party that supplies a Couchdb server for repositories, should therefore configure CORS in the same way. As a consequence, PDR sources, served from https://mycontexts.com, are allowed to see resources served from such servers.
 
 === Redirection
 
@@ -544,7 +544,7 @@ Not all browsers currently support following redirects after a preflighted reque
 
 In contrast, redirect is always allowed on _simple requests._ The PDR requests models in a way that seems to satisfy the criteria for such simple requests, excepting that the content-type header is application/json (which is not allowed). Nevertheless, in Chrome (version 100.0.4896.88) no pre-flight request seems to be done.
 
-The redirecting party should implement CORS for inplace.works, too.
+The redirecting party should implement CORS for mycontexts.com, too.
 
 We implement the PDR on the assumption that browsers allow redirection on our CORS requests.
 
@@ -552,14 +552,14 @@ An example redirection directive for Apache, for example to be used in the persp
 
 [code]
 ----
-RedirectMatch permanent "^/models(.*)$" https://inplace.works/models$1
+RedirectMatch permanent "^/models(.*)$" https://mycontexts.com/models$1
 ----
 
 A similar effect (but without redirect HTTP status code) can be achieved by a reverse proxy:
 
 [code]
 ----
-ProxyPassMatch "^/models(.*)$" https://inplace.works/models$1
+ProxyPassMatch "^/models(.*)$" https://mycontexts.com/models$1
 ----
 
 ==== Observations
@@ -569,7 +569,7 @@ On the local version of perspectives.domains, we observe that
 * the redirection fails because of the preflight problem with CORS (The preflight request cannot be observed in Chrome);
 * the reverse proxy works, but only if the database is public (i.e. if no members or admins are defined.
 
-Obviously, the PDR does not send credentials for the reverse proxy (inplace.works) with the request for the domain (perspectives.domains). So, while the reverse proxy works, no credentials are sent along with it.
+Obviously, the PDR does not send credentials for the reverse proxy (mycontexts.com) with the request for the domain (perspectives.domains). So, while the reverse proxy works, no credentials are sent along with it.
 
 While _retrieving_ models without credentials might be ok, uploading models certainly needs credentials. This is a problem to be solved.
 

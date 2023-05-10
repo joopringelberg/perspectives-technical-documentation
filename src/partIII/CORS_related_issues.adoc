@@ -11,7 +11,7 @@ Rather, the mistake stems from the fetch request made by Pouchdb: this does not 
 	or "websocket". Unless stated otherwise, it is "no-cors".
 	(https://fetch.spec.whatwg.org/)
 
-I have corrected this by using the 'fetch' option provided to the database creation of Pouchdb. It allows one to capture fetch and add options and headers etc. to the actual request. On the assumption that, for Perspectives, any request through Pouchdb will be a cors request because we don't store resources on inplace.works, every request is a cors request.
+I have corrected this by using the 'fetch' option provided to the database creation of Pouchdb. It allows one to capture fetch and add options and headers etc. to the actual request. On the assumption that, for Perspectives, any request through Pouchdb will be a cors request because we don't store resources on mycontexts.com, every request is a cors request.
 
 It seems as though FireFox doesn't suffer from the same problem. This might be because browser implementers have a certain freedom in implementing a default for the "mode" option:
 

@@ -18,9 +18,9 @@ _What is Perspectives for?_ We have created a modelling language from which work
 
 _What is it like, conceptually?_ Think Access List Control (ACL). IT professionals are familiar with ACL as a way to describe and enforce limited access to computing resources for a variety of end users. ACL systems are applied to existing systems, as an add-on. With Perspectives we turn that on its head: from the specification of whom is entitled to what (viz. information and basic CRUD actions) we generate a working system. Thus, privacy is not an afterthought; it is the design itself.
 
-_What is the main technical challenge?_ Usually, ACL systematics are implemented as a restriction of an otherwise very permissive system (anything goes for any user). And this latter system almost invariably involves some form of shared persistent memory: central databases, a central server or a central bus providing access to modifiable stores. Not so in Perspectives. People form a network by their interactions; as users of Perspectives, each of them runs an installation of InPlace (the Perspectives Distributed Runtime (PDR) plus a GUI, plus a private database, usually local). Considered as nodes in a network, a crucial observation is that all nodes are functionally equal (no clients, no servers, no hubs, etc). The main technical challenge for creating the PDR then is to figure out, for each possible modification of the allowed data structures that is initiated on some PDR, what other PDR's should be informed. And, as a corollary, it is to check each received modification against the model to protect the user against unauthorised modifications.
+_What is the main technical challenge?_ Usually, ACL systematics are implemented as a restriction of an otherwise very permissive system (anything goes for any user). And this latter system almost invariably involves some form of shared persistent memory: central databases, a central server or a central bus providing access to modifiable stores. Not so in Perspectives. People form a network by their interactions; as users of Perspectives, each of them runs an installation of MyContexts (the Perspectives Distributed Runtime (PDR) plus a GUI, plus a private database, usually local). Considered as nodes in a network, a crucial observation is that all nodes are functionally equal (no clients, no servers, no hubs, etc). The main technical challenge for creating the PDR then is to figure out, for each possible modification of the allowed data structures that is initiated on some PDR, what other PDR's should be informed. And, as a corollary, it is to check each received modification against the model to protect the user against unauthorised modifications.
 
-_How will it be used?_ We hope that InPlace, the framework program, will attract a community of users and of makers, where the latter create models and screens that contribute functionality. Models + screens ('apps') will be distributed through repositories (webstore-like servers). Models will be downloaded once and stored in the (local) private database, too.
+_How will it be used?_ We hope that MyContexts, the framework program, will attract a community of users and of makers, where the latter create models and screens that contribute functionality. Models + screens ('apps') will be distributed through repositories (webstore-like servers). Models will be downloaded once and stored in the (local) private database, too.
 
 === Architecture: requirements
 
@@ -129,7 +129,7 @@ The architecture consists of three components:
 
 See <<img-architecture, the diagram below>>.
 
-.Application layer, React data containers and Javascript API proxy library form the client. The PDR runs in a SharedWorker. The client connects to the Distributed Runtime via window.postMessage. The PDR connects to Couchdb via HTTPS. Yellow components are ‘propriety’ (but open source). The Application Layer consists of models in PL and React-based screens. They are ‘apps’ that are ‘hosted’ in InPlace, the end user framework program (the name of the entire ensemble).
+.Application layer, React data containers and Javascript API proxy library form the client. The PDR runs in a SharedWorker. The client connects to the Distributed Runtime via window.postMessage. The PDR connects to Couchdb via HTTPS. Yellow components are ‘propriety’ (but open source). The Application Layer consists of models in PL and React-based screens. They are ‘apps’ that are ‘hosted’ in MyContexts, the end user framework program (the name of the entire ensemble).
 [#img-architecture]
 image::architecture.jpg[]
 
@@ -152,13 +152,13 @@ To connect, two installations need each other’s message queue address, requiri
 Finally. A node supports more than a single user. Each user has an account that is (currently) password protected. This account maps one to one to a Couchdb admin account for the relevant databases (a data database, a models database and a post database), or to a set of tables in IndexedDB.
 
 The installing user must have a database admin account with the Couchdb installation.
-Currently, the local account administration used by the login screen is kept in files in an IndexedDB database ('localusers'). It is accessible to processes in the https://inplace.works domain.
+Currently, the local account administration used by the login screen is kept in files in an IndexedDB database ('localusers'). It is accessible to processes in the https://mycontexts.com domain.
 
 === Security Concerns
 
 From the above, some obvious security concerns follow. We've identified the following:
 
-1.	The local user account secrets are accessible to anyone with (enough) access to the device and with enough knowledge to access the IndexedDB database 'localusers' for the https://inplace.works domain. In other words, a users' data is as secure as his own device. Once an attacker can log in to InPlace, he can impersonate the user, and can steal his data.
+1.	The local user account secrets are accessible to anyone with (enough) access to the device and with enough knowledge to access the IndexedDB database 'localusers' for the https://mycontexts.com domain. In other words, a users' data is as secure as his own device. Once an attacker can log in to MyContexts, he can impersonate the user, and can steal his data.
 2.	An agent might try to inject Transactions into a message queue, targeting a specific user, impersonating another. This requires the message queue address of that user and the secret key of the impersonated user, to sign the Transaction. Encryption is used for authentication purposes.
 +
 Note that even if an agent would successfully impersonate someone’s peer, they still can only change a persons' data in accordance with the modelled authorisations of that peer (an attacker cannot assume more authorized privileges, since the receiving peer himself 

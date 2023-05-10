@@ -272,7 +272,7 @@ By running each name through the old-new table, we can find the internal name fo
 
 === A diff function for model source files
 
-By comparing DomeinFiles, we can construct a structure of data that details the differences between a model's types. This structure could be encoded as JSON and we could generate a readable report from that, to be consulted through the InPlace GUI.
+By comparing DomeinFiles, we can construct a structure of data that details the differences between a model's types. This structure could be encoded as JSON and we could generate a readable report from that, to be consulted through the MyContexts GUI.
 
 We can put this diff structure to good use by providing hints for the modeller that can be shown in the IDE. Particularly, we might draw his attention to references to type names he failed to update after renaming the type (e.g. a property name in a view). We can do this because the DomeinFile refers using the internal name and we can look up the new readable name and compare it with the name in the text.
 
