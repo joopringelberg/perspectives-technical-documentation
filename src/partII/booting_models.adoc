@@ -64,3 +64,25 @@ perspective of Visitor
 ----
 
 Obviously, the value `model://perspect.it/SimpleChat$MyChats` should be customised in each model.
+
+== Booting the Perspectives Universe
+A special case of booting has happened during development of Perspectives. We describe it here just in case it has to happen again.
+
+We would like a fresh MyContexts installation to have a list of elementary models that the end user can add to her installation. In other words, we want the repository for the namespace `model://perspectives.domains` to be available. We could try to include the corresponding Repository description by adding this line to the boot sequence instructions:
+
+[code]
+----
+bind publicrole pub:https://perspectives.domains/cw_servers_and_repositories/#perspectives_domains$External to BaseRepository in sys:MySystem
+----
+
+However, to compile `model://perspectives.domains#System` with this line, the compiler needs to be able to look up the type `model://perspecives.domains/CouchdbManagement` locally - that is in an installation that already has this model. This introduces a catch-22 because this latter model requires the former - hence, we have introduced a circular dependency even though only one model (CouchdbManagement) refers to the other.
+
+We've taken the following approach to avoid this problem:
+
+* compile `model://perspectives.domains#System` with this line commented out;
+* set up an installation with this version of System;
+* compile `model://perspectives.domains#CouchdbManagement` with that installation;
+* uncomment the line;
+* recompile `model://perspectives.domains#System` and add it to the Repository
+
+Now, each next installation will have a reference to the base repository (it can be found at https://perspectives.domains/cw_servers_and_repositories/perspectives_domains)

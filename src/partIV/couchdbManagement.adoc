@@ -1,0 +1,70 @@
+[desc="A model to manage resources in Couchdb databases for MyContexts"]
+== CouchdbManagement
+
+In previous chapters, we've given a lot of detail concerning
+
+* <<_models,Models>>
+* <<_type_and_resource_identifiers,Type and Resource Identifiers>>.
+
+In the current chapter, we build on those concepts to describe how a particular Perspectives model in the namespace `perspectives.domains` is used in MyContexts to manage models on the internet.
+
+=== Overview
+The main concepts in this model are
+
+  - CouchdbServer
+  - Repository
+  - ModelManifest
+  - VersionedModelManifest.
+
+A CouchdbServer instance describes a particular, existing server on the open internet. Its address is registered in the CouchdbServer instance. A Couchdb installation should be present on that server and the Perspectives user creating the CouchdbServer instance should have Admin credentials for this Couchdb installation. The credentials must be entered in MyContexts; they are added to the CouchdbServer$Admin role. For this CouchdbServer instance, a database is created with the standard name `cw_servers_and_repositories`. 
+
+CouchdbServer has a Visitor role that publishes to this database. Hence, a public version of the CouchdbServer instance is available at this publicly accessible URL. The Visitor has a perspective on PublicRepositories, a filtered version of the role Repositories that is filled with Repository instances. These instances have a public Visitor role, too; it publishes to the same `cw_servers_and_repositories` database. Consequently, a Visitor can navigate from a CouchdbServer to its (public) Repositories (there may be private Repositories, too) and his PDR retrieves all these instances from the same database.
+
+Within a Repository, the Visitor has a perspective on a role Manifests filled with ModelManifest. However, Manifests are grouped by namespace. For example, both the System model and the CouchdbManagement model are in the `perspectives.domains` namespace. The PDR translates a model URI like `model://perspectives.domains#Systems` automatically to a URL that retrieves the compiled model (the DomeinFile). In doing so, it assumes that the DomeinFile is in a database whose name is derived from the namespace. In our example this will be the database `models_perspectives_domains`. It also derives a URL from the model URI that points to the models Manifest. It assumes this manifest is in the database `cw_perspectives_domains`.
+
+Now we have the following situation:
+
+* the Repository instance describing the namespace perspectives.domains is expected in the `cw_servers_and_repositories` database
+* the CouchdbManagement and System ModelManifest files are expected in the `cw_perspectives_domains` database.
+
+ModelManifest has a Visitor role, too. The instance that is associated with the namespace `perspectives.domains` publishes to the `cw_perspectives_domains` database. We now have everything in its place, because, for example, the ModelManifest describing the CouchdbManagement model is, indeed, stored in the database where the PDR expects it to be.
+
+=== An aside: how does this work?
+Consider for a moment an Admin role who adds a ModelManifest to the Repository for the `perspectives.domains` namespace. In his own PDR installation, the modified Repository instance, the new Manifests role instance and contexts and roles describing the new ModelManifest will be stored in his own local repositories. But because of the public roles, versions of these resources should be published as well. Let's look in detail to some of these resources:
+
+* the new Manifests role is within scope of Repository$Visitor and thus will be published to `cw_servers_and_repositories`
+* however, its filler, the external role of ModelManifest, is within scope of ModelManifest$Visitor and should be published to `cw_perspectives_domains`!
+
+Consequently, the url of the Manifests role will be like this: `https://perspectives.domains/cw_servers_and_repositories/<guid1>`. But the url of the filler, the external role of ModelManifest, will be like this: `https://perspectives.domains/cw_perspectives_domains/<guid1>`. It appears that, on publishing, the PDR should look up the public url for each context type. If a context has a public role, the PDR should use it; otherwise the PDR just uses the public url of the publishing role. So, because the filler is a role of ModelManifest, the PDR uses its public URL to construct a pub: identifier.
+
+Should it actually publish the external role itself (to the `cw_perspectives_domains` database)? It can only do so if the end user (or rather the Admin roles he plays) has the credentials that allow him to do so. To make that explicit: a Repository$Admin creating a new ModelManifest should have write access to 
+
+* the `cw_servers_and_repositories` database for the CouchdbServer;
+* the `cw_perspectives_domains` database, or, in general, the database that holds the ModelManifest instances for the namespace described by the Repository.
+
+We can actually arrange that in `model://perspectives.domains#CouchdbManagement`, and we should and have done so. So, under these circumstances: yes, the PDR should publish not only the new Manifests role instance, but also all role- and the context instances describing the new ModelManifest.
+
+We consider this to be a model pattern. A user role with the perspectives to create a new context, where both the embedded context role and the new context have a public perspective, should have write access rights to both databases.
+
+Now what if a user role has the perspective to create a new embedded context role _that is filled with an existing public role_? That is, its filler has the `pub:` scheme? In this case, the user role does not necessarily have the perspective to create such public roles (i.e. someone else made that role instance). However, _his own version of that embedded context role will also be filled with an identifier in the `pub:` scheme_. And on publishing, we just leave such references intact. All is well!
+
+=== URL Rewriting Revisited
+Consider the namespace `perspectives.domains`. It's Repository is associated with the database cw_perspectives_domains. In this database, we'll find the ModelManifests for all models in the `perspectives.domains` namespace, like model://`perspectives.domains#System`. The URL of that ModelManifest can be derived directly from the model URI: https://perspectives.domains/cw_perspectives_domains/perspectives_domains-System.json. 
+
+Now consider the namespace `joopringelberg.nl`. Let's suppose it's Repository, too, is hosted in the CouchdbServer at https://perspectives.domains. Consequently, there will be a database cw_joopringelberg_nl holding the ModelManifests for models in this namespace, like for example `model://joopringelberg.nl#MyModel`. The PDR will derive the following URL for the ModelManifest for that model: `https://joopringelberg.nl/cw_joopringelberg_nl/MyModel`. But now we have a problem, because the manifest isn't at joopringelberg.nl, it is at perspectives.domains!
+
+We must solve this problem by rewriting the URL of the manifest on the server that hosts joopringelberg.nl. It should swap the authority of all ModelManifest urls with perspectives.domains. See also <<rewriting_in_type_and_resource_identifiers,Rewriting>>
+
+=== Naming instances
+Because the PDR derives the ModelManifest instance URL from the model URI, care should be taken to explicitly name the ModelManifest instances. We can use the following syntax:
+
+[code]
+----
+create context ModelManifest named <modelname-expression> bound to Manifests
+----
+
+where, obviously, <modelname-expression> should result in the name of the model, like MyModel or System for the examples in this chapter. 
+
+Similarly, we should carefully name instances of VersionedModelManifest. Instances of the other important types (CouchdbServer, Repository) need not be named.
+
+NOTE: the PDR does not yet construct VersionedModelManifest urls.

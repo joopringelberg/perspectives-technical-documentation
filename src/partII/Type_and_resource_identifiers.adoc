@@ -70,10 +70,11 @@ Our model scheme has the advantage that it can be easily mapped onto a URL. As a
 
 === Mapping URIs to URLs
 
-We use a simple mapping from URI to URL. The authority (a reg-name) is used twice:
+We use a simple mapping from URI to the URL where the DomeinFile (the compiled model text) can be found. The authority (a reg-name) is used thrice:
 
-* Once as the authority of an URL in the https scheme;
-* Once as part of a single step in the path of that URL. That single step is prefixed with “models_” and all dots are replaced by underscores.
+* Once as the authority of a URL in the https scheme;
+* Once as part of a single step in the path of that URL. That single step is prefixed with “models_” and all dots are replaced by underscores. It identifies the Couchdb database that holds the DomeinFile;
+* Once as part of the actual file name that the DomeinFile is stored under (see <<_domeinfile_identifiers,DomeinFile Identifiers>>.)
 
 For example:
 
@@ -81,7 +82,7 @@ For example:
 
 maps to:
 
-`https://perspectives.domains/models_perspectives_domains/System.json`
+`https://perspectives.domains/models_perspectives_domains/perspectives_domains-System.json`
 
 Another example:
 
@@ -89,34 +90,32 @@ Another example:
 
 maps to:
 
-`https://perspectives.domains/models_social_perspectives_domains/System.json`
+`https://perspectives.domains/models_social_perspectives_domains/social_perspectives_domains-System.json`
 
 In this way, we can have multiple hierarchical levels in our model namespaces, while always mapping them to a location in a simple domain (By which we mean: a top level domain, such as “com” and one subdomain (such as “google”)).
 
 === Model stores
 
-The Perspectives Distributed Runtime uses Pouchdb, that relies on the conventions of Couchdb, to access resources. For our purposes, this means that a webserver must map URLs of the form `https://perspectives.domains/models_social_perspectives_domains/System.json` to a database in a Couchdb installation (for example, a local installation). It is up to the webserver to provide that mapping (But there are three restrictions. See <<Mapping Model Identifiers to Storage Locations>>). However, we suggest a simple scheme that just uses the first step of the path as the database name. In this case, the json resource might be retrieved from Couchdb using this string: `models_social_perspectives_domains/System.json`. That is, we want the resource System.json in the database `models_social`.
+The Perspectives Distributed Runtime uses Pouchdb, that relies on the conventions of Couchdb, to access resources. For our purposes, this means that a webserver must map URLs of the form `https://perspectives.domains/models_social_perspectives_domains/social_perspectives_domains-System.json` to a database in a Couchdb installation (for example, a local installation). It is up to the webserver to provide that mapping (But there are three restrictions. See <<Mapping Model Identifiers to Storage Locations>>). However, we suggest a simple scheme that just uses the first step of the path as the database name. In this case, the json resource might be retrieved from Couchdb using this string: `models_social_perspectives_domains/perspectives_domains-System.json`. That is, we want the resource perspectives_domains-System.json in the database `models_social`.
 
 [quote]
 According to its documentation, Couchdb allows forward slashes in its database names. In the practice of version 3.1.0 this runs into problems. Hence we replace slashes by underscores.
 
 === Storage service providers
 
-NOTE: This section may not be up to date.
-
-Suppose Perspect BV io would provide storage services to third parties, how would it handle them? It could offer an author like me to use a subspace of their namespace perspectives.domains, e.g. `joopringelberg.perspectives.domains`. I could then create a model with this name: `model://joopringelberg.perspectives.domains#JoopsModel`. This would map to the following url: `https://perspect.it/models_joopringelberg_perspect_it/JoopsModel.json`. Their server would consequently look for the resource `JoopsModel.json` in the database `models_joopringelberg_perspectives_domains`.
+Suppose Perspect BV io, owner of the domain `perspectives.domains` would provide storage services to third parties, how would it handle them? It could offer an author like me to use a subspace of their namespace, e.g. `joopringelberg.perspectives.domains`. I could then create a model with this name: `model://joopringelberg.perspectives.domains#JoopsModel`. This would map to the following url: `https://perspectives.domains/models_joopringelberg_perspect_perspectives_domains/joopringelberg_perspect_perspectives_domains-JoopsModel.json`. Their server would consequently look for the resource `joopringelberg_perspect_perspectives_domains-JoopsModel.json` in the database `models_joopringelberg_perspectives_domains`.
 
 While perfectly usable, I’d have to rename my model if I wanted to move it to a different provider, because I’d have tied my namespace to theirs (it is a subspace of theirs). That would be very impractical.
 
 It so happens that I own the domain name `joopringelberg.nl`. Suppose I created a model named `model://joopringelberg.nl/JoopsModel` (notice the .nl part!), the PDR would map it to:
 
-`https://joopringelberg.nl/models_joopringelberg_nl/JoopsModel.json`
+`https://joopringelberg.nl/models_joopringelberg_nl/joopringelberg_nl-JoopsModel.json`
 
-My server does not host a Couchdb. However, I could redirect (See <<Cross Origin Resource Sharing>>) that to:
+My server does not host a Couchdb. However, I could redirect (See <<Cross Origin Resource Sharing>>: the domain joopringelberg.nl must be indicated by the server to be allowed for CORS) that to:
 
-`https://perspectives.domains/models_joopringelberg_nl/JoopsModel.json`
+`https://perspectives.domains/models_joopringelberg_nl/joopringelberg_nl-JoopsModel.json`
 
-The perspectives.domains server would then request the resource JoopsModel.json from the database `models_joopringelberg_nl`. All is well!
+The perspectives.domains server would then request the resource joopringelberg_nl-JoopsModel.json from the database `models_joopringelberg_nl`. All is well!
 
 Can I have subspaces in my namespace? Yes:
 
@@ -124,13 +123,13 @@ Can I have subspaces in my namespace? Yes:
 
 maps to
 
-`https://joopringelberg.nl/models_professional_joopringelberg_nl/JoopsModel.json`
+`https://joopringelberg.nl/models_professional_joopringelberg_nl/professional_joopringelberg_nl-JoopsModel.json`
 
 and is forwarded to:
 
-`https://perspectives.domains/models_professional_joopringelberg_nl/JoopsModel.json`
+`https://perspectives.domains/models_professional_joopringelberg_nl/professional_joopringelberg_nl-JoopsModel.json`
 
-and leads the server to request the resource JoopsModel.json from the database models_professional_joopringelberg_nl/joopringelberg/nl. Again, all is well.
+and leads the server to request the resource professional_joopringelberg_nl-JoopsModel.json from the database models_professional_joopringelberg_nl/joopringelberg/nl. Again, all is well.
 
 The takeaway is that I could identify my models like this: `model://joopringelberg.nl/JoopsModel`. Identifiers like this would remain valid as long as I own the `joopringelberg.nl` domain, while I could switch storage providers at will.
 
@@ -154,7 +153,7 @@ version core = numeric_identifier "." numeric_identifier "." <numeric identifier
 
 (see https://semver.org/[semantic versioning] for the production of <numeric identifier>).
 
-The versioned version of our previous example:
+The versioned version of the System model:
 
 `model://perspectives.domains#System`
 
@@ -164,9 +163,9 @@ would be, for example:
 
 and be mapped to the url
 
-`https://perspectives.domains/models_perspectives_domains/System@1.0.0`
+`https://perspectives.domains/models_perspectives_domains/perspectives_domains-System@1.0.0`
 
-while the server would map this to the document `System@1.0.0` in the database models_perspectives_domains.
+while the server would map this to the document `perspectives_domains-System@1.0.0` in the database models_perspectives_domains.
 
 === Pre-release versions
 
@@ -183,27 +182,29 @@ Identifier = “//” reg-name “/” segment-nz-nc “@” version core [ - <p
 
 An _optional_ pre-release string may be appended to the model name, separated from it by a hyphen.
 
-== Model description: a public context
+NOTE: pre-release model version mapping to separate databases has not yet been implemented.
 
-A domeinfile is a resource that holds the machine readable version of a model. However, end users will want to inform themselves about a model before taking it into use. For this we introduce the convention of a _model description_. The description of a model is itself a resource, a context instance to be precise. Its type is defined in `model://perspectives.domains#System`. The instance contains descriptive text, an expanded name, etcetera.
+== Model Manifest: a public context
 
-A model description should be accessible to everyone, or at least to everyone subscribing to a model repository (subscription may require a fee). A model description qualifies as a _public context_: it’s type defines a Visitor role (see the text _Universal Perspectives_).
+A domeinfile is a resource that holds the machine readable version of a model. However, end users will want to inform themselves about a model before taking it into use. For this we introduce the convention of a _model manifest_. The manifest describing a model is itself a resource, a context instance to be precise. Its type is defined in `model://perspectives.domains#System`. The instance contains descriptive text, an expanded name, etcetera.
 
-Crucially, a public context is the same for everybody (Except for the model author): each participant has the same (consulting) perspective. This means that end users can share a single resource representation.
+A model manifest should be accessible to everyone, or at least to everyone subscribing to a model repository (subscription may require a fee). A model manifest qualifies as a _public context_: it’s type defines a Visitor role (see the text <<_universal_perspectives,Universal Perspectives>>).
 
-By convention, we will have a model description instance in a location that can be derived from the model URI. We have seen before that
+Crucially, a public context is the same for everybody (except for the model author): each participant has the same (consulting) perspective. This means that end users can share a single resource representation.
+
+By convention, we will have a model manifest instance in a location that can be derived from the model URI. We have seen before that
 
 `model://perspectives.domains#System`
 
 maps to:
 
-`https://perspect.it/models_perspect_it/System.json`
+`https://perspectives.domains/models_perspectives_domains/perspectives_domains-System.json`
 
 But we can also map it to:
 
-`https://perspect.it/cw_perspect_it/System.json`
+`https://perspectives.domains/cw_perspectives_domains/perspectives_domains-System.json`
 
-and at this location the model description instance is found.
+and at this location the model manifest instance is found.
 
 === Public context stores
 
@@ -211,9 +212,9 @@ A server that manages a models database for the domain X should therefore also m
 
 For example:
 
-`https://perspect.it/cw_perspect_it/System.json`
+`https://perspectives.domains/cw_perspectives_domains/perspectives_domains-System.json`
 
-looks for `System.json` (the ModelManifest for `model://perspectives.domains#System`) in the database `cw_perspectives_domains`.
+looks for `perspectives_domains-System.json` (the ModelManifest for `model://perspectives.domains#System`) in the database `cw_perspectives_domains`.
 
 Obviously, like we saw above, it may forward these URLs to another domain, if that is convenient.
 
@@ -370,7 +371,9 @@ We derive a name from that model URI to store a DomeinFile locally on a users PD
 
 [code]
 ----
-	DomeinFileName = Authority '-' LocalModelName.json
+	DomeinFileName = Authority_ '-' LocalModelName.json
+
+  Authority_ = Underscore-separated string parts
 ----
 
 This is a name that is compatible with Couchdb file name rules. Why don't we just use the LocalModelName? Well, that may identify the model uniquely within the repository for a given namespace, but not so locally, where the end user collects models from all kinds of domains. There may very well be a model called 'Automotive' in two separate domains:
@@ -387,7 +390,7 @@ We treat DomeinFiles as instances of classes Persistent and Cachable. The Persis
 We achieve this for DomeinFiles by having a scheme 'model:' (along with loc:, def:, remote: and public:). This means that
 
 - we can identify a DomeinFile with its full model URI w.r.t. Persistent and friends (in other words: the _id member contains the model URI);
-- the actual files are stored in the form specified above as DomeinFileName (but we never handle that name as such outside class Persistent and the module Perspectives.ResourceIdentifiers).
+- the actual files are stored with a name in the form specified above as DomeinFileName (but we never handle that name as such outside class Persistent and the module Perspectives.ResourceIdentifiers).
 
 Couchdb particulars: we serialise the DomeinFile using generic encoding. This results in a JSON structure with a member "contents" and a member "tag". However, Couchdb expects the members "_id" and "_rev", too. Just before storing the file, we add both members to the serialization. Both members are also part of the "contents". There is the following relation between both:
 
@@ -430,6 +433,9 @@ The modeller publishes a context using the following syntactical construct:
 ----
 
 The keywords `publish at` should be followed by an expression that yields a Url in runtime, as evaluated with respect to the current context.
+
+NOTE: The result of this expression **must** end on a forward slash! The compiler cannot check this; only a runtime error will reveal that the forward slash is missing.
+
 On processing the ARC file, the PDR creates two roles with the given perspective:
 
 * a calculated Visitor role: user Visitor = sys:Me
@@ -504,16 +510,20 @@ The public: scheme is just like the remote: scheme, but for the scheme name itse
 
 The rule for deltas is then that all default:, local: and remote: schemed identifiers should be reduced to their guids, whereas the public: identifiers are not. 
 
-=== NAMESPACESTORE
+=== Overlapping public perspectives
+In model://perspectives.domains#CouchdbManagement, both a Repository and a ModelManifest have a public role. In fact, the ModelManifest contextrole property `LocalModelName` falls in both public perspectives. Either perspective publishes to a different location. Where does the contextrole of ModelManifest end up?
 
-We have a special case called NAMESPACESTORE. It is mapped to the location of public contexts associated with the namespace of the type. Casu quo: sys:ModelManifest expands to model://perspectives.domains#System$ModelManifest and that, in turn is mapped onto `https://perspectives.domains/cw_perspectives_domains`.
+Let's step back here and reflect for a moment on the meaning of public roles. A public role is one that can be taken on by any member of the public (this is not entirely true, as the model's author may require particular role instances to fill the public role - but the general thrust of the argument remains). As a consequence, the resources in the public perspective are available to the public - regardless of the exact url where they are published. 
 
-[code]
-----
-case ModelManifest public NAMESPACESTORE
-----
+One approach to the problem posed above, therefore, is just to publish the contextrole of ModelManifest and its property `LocalModelName` to _both locations_. Consider for a moment however, what would happen if a visitor of Repository opens a ModelManifest instance. Doing so he assumes the ModelManifest$Visitor role, which gives him access to, a.o., the Versions role. But as Repository$Visitor does not have a perspective on that role, it is not represented at the particular url where Repository$Visitor has published. No Versions will turn up! In contrast, were the user to visit ModelManifest directly, he would find instances of Versions. Clearly this is not what we want.
 
-directs the PDR to create an instance of ModelManifest in whatever location its user has associated with the symbolic name NAMESPACESTORE.
+For that reason we have adopted another strategy. We define, for each context, an optional public url. It will be available if there is a public user role in that context. Now, for each role instance, if its context does have a public url, we will publish it there. If it has no public url of itself (and we are indeed publishing) we use the public url of the user we are actually publishing for.
+
+Let's consider some examples. 
+
+In case of the role ModelManifest$External (with property LocalModelName), we find that ModelManifest does have a public url - it is the url where its Visitor role publishes to. So, even if we're in the middle of publishing _for_ Repository$Visitor, we'll publish ModelManifest$External to the url of ModelManifest$Visitor rather than to Repository$Visitor's url.
+
+In case of, say, the System$User role, things are different. Both Repository$Visitor and ModelManifest$Visitor have a perspective on User - but System doesn't have a public role of its own. So, an instance of User ends up at both public locations. 
 
 == The default repository
 
@@ -534,9 +544,13 @@ However, a server may be configured such that it sends CORS headers. Couchdb sup
 
 Every hosting party that supplies a Couchdb server for repositories, should therefore configure CORS in the same way. As a consequence, PDR sources, served from https://mycontexts.com, are allowed to see resources served from such servers.
 
-=== Redirection
+=== HTTPS and certificates
 
-In paragraph _Model stores_ we suggest that if a domain is hosted by party A, while the repository where models in that domain are stored is hosted by party B on another domain, party A _redirects_ requests to party B’s domain. However, CORS does not always allow this (see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSExternalRedirectNotAllowed).
+All domains should be approached using the https scheme. This holds for domains that redirect, too. So, in our example, the server that redirects from joopringelberg.nl should have a certificate for that domain.
+
+=== Redirection: problematic
+
+In paragraph <<_storage_service_providers,Storage service providers>> we suggest that if a domain is hosted by party A, while the repository where models in that domain are stored is hosted by party B on another domain, party A _redirects_ requests to party B’s domain. However, CORS does not always allow this (see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSExternalRedirectNotAllowed).
 
 This holds especially for so called ‘pre-flight requests’ (made with the OPTION verb). From MDN:
 
@@ -548,18 +562,18 @@ The redirecting party should implement CORS for mycontexts.com, too.
 
 We implement the PDR on the assumption that browsers allow redirection on our CORS requests.
 
-An example redirection directive for Apache, for example to be used in the perspectives.domains configuration file:
+An example redirection directive for Apache, for example to be used in the configuration file for VirtualHost joopringelberg.nl, where the actual hosting is done on the address perspectives.domains:
 
 [code]
 ----
-RedirectMatch permanent "^/models(.*)$" https://mycontexts.com/models$1
+RedirectMatch permanent "^/models(.*)$" https://perspectives.domains/models$1
 ----
 
 A similar effect (but without redirect HTTP status code) can be achieved by a reverse proxy:
 
 [code]
 ----
-ProxyPassMatch "^/models(.*)$" https://mycontexts.com/models$1
+ProxyPassMatch "^/models(.*)$" https://perspectives.domains/models$1
 ----
 
 ==== Observations
@@ -573,6 +587,48 @@ Obviously, the PDR does not send credentials for the reverse proxy (mycontexts.c
 
 While _retrieving_ models without credentials might be ok, uploading models certainly needs credentials. This is a problem to be solved.
 
-== HTTPS and certificates
+=== Rewriting
+[#rewriting_in_type_and_resource_identifiers]
+Instead of redirecting or proxying, we may _rewrite_ an url. Continuing the example above for VirtualHost joopringelberg.nl:
 
-All domains should be approached using the https scheme. This holds for domains that redirect, too. So, in our example, the server that redirects from joopringelberg.nl should have a certificate for that domain.
+[code]
+----
+  RewriteEngine On
+  RewriteCond %{REQUEST_URI} ^/models(.*)$
+  RewriteRule ^(/.*)$  https://perspectives.domains/$1  [R=204]
+----
+
+A url of the form https://joopringelberg.nl/models_joopringelberg_nl will now be rewritten to https://perspectives.domains/models_joopringelberg_nl, while other URLs in the same domain would be left untouched.
+
+Now it turns out that Couchdb does not handle OPTIONS requests or at least not in the way we need it. Therefore, we handle all preflight requests here. We redirect an OPTIONS request to the default `index.html`, while stipulating that the response has the 204 (no content) code. We also add all the required headers and make sure that there are no doubles by first removing any existing values.
+
+[code]
+----
+  RewriteCond %{REQUEST_METHOD} ^(OPTIONS)$
+  RewriteCond %{REQUEST_URI} ^/models.*$
+  RewriteRule ^/.*$  index.html  [R=204]
+
+  Header unset Access-Control-Allow-Credentials
+  Header unset Access-Control-Allow-Methods
+  Header unset Access-Control-Allow-Origin
+  Header unset Access-Control-Allow-Headers
+
+  Header always set Access-Control-Allow-Credentials "true"
+  Header always set Access-Control-Allow-Methods "GET, PUT, POST, DELETE, OPTIONS"
+  Header always set Access-Control-Allow-Origin https://mycontexts.com
+  Header always set Access-Control-Allow-Headers "content-type"
+----
+
+This code rewrites an url with the OPTIONS verb, when its path starts with "models". Notice that we allow the origin https://mycontexts.com.
+
+We now should adapt our rewriting for URLs whose path start with "models_", stipulating that it should not run for the OPTIONS verb:
+
+[code]
+----
+  RewriteEngine On
+  RewriteCond %{REQUEST_METHOD} !^(OPTIONS)$
+  RewriteCond %{REQUEST_URI} ^/models(.*)$
+  RewriteRule ^(/.*)$  https://perspectives.domains/$1  [R=204]
+----
+
+Again, this only works for databases that can be accessed without credentials. That will be enough for reading DomeinFiles (models) from public repositories. 

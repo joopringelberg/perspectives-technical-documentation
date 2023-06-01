@@ -1,0 +1,51 @@
+[desc="Restoring the private version of a resource from public versions."]
+= Restoring from public resources
+
+WARNING: Functionality described in this section has not yet been implemented.
+
+It may happen that a privately held collection of resources gets lost. It is possible to restore the part of them that had been published. Essentially, the idea is that the end user visits the public version and then applies the restore operation to it. Restoring consists of executing all deltas found in the resource - they do constitute a complete log of its construction.
+
+Of course, these deltas have to be executed in an order that makes each operation possible:
+
+  * first reconstruct the context, its external role and its properties;
+  * then the other roles and their properties.
+
+Complications arise from automatic actions that can be executed when a resource gets into a particular state. We'll discuss that below.
+
+== Referenced roles and their contexts
+Roles can be filled by other roles and these links constitute a network of contexts. Each time a role fill delta is executed, the algorithm doing so retrieves the referenced role from the public store, unless it can find a privately held version. Each time a context delta is executed, the algorithm fetches the context instance in a likewise manner, always preferring private versions.
+
+In this way, the resources that were lost _grow back into the privately held network_. 
+
+== Backlinks
+Role fill relations are registered at both ends in the network of resources, in order to be able to traverse them in both ways: from filler to filled and vice versa. However, the role binding delta describing the fill operation _is stored just in the filled role_. The end user starts the restore operation from a context. It's external (context) role will be re-created from a UniverseRoleDelta and a ContextDelta. However, if that external role fills an embedded context role in another context, the RoleBindingDelta describing the fill operation _is not available in the external role_. In order to restore the roles that are filled by it, the algorithm has to traverse the registered backlinks and restore the filled roles.
+
+== Limitations
+Notice that only the public version of a resource can be retrieved in this way. A user may well have had a more extensive perspective. Property values, role instances and indeed entire referenced contexts that were not published cannot be restored in this way.
+
+What if the users' perspective was actually _smaller_ than the public version? This is no problem, at least not conceptually. The resulting local resource will be larger than the original, lost version; but the user will just 'see' the roles and properties that fall within his perspective. A practical drawback might arise if, for example, the public version consumes much more memory than the original private one.
+
+== Automatic actions
+On reconstructing a resource, it may attain a state that holds an automatic action for the user. Should we execute it? One might reason that it must have been executed before. Whether the user constructed the resource himself, or a peer did so, the users' PDR has performed the exact same operation that brings the resource in this state, before.
+
+But is that really true? Consider the case of a state condition consisting of two parts:
+
+* a boolean property that should be `true` and
+* an expression that says that a role instance should not exist.
+
+Now the order in which we restore the resources matters: if we first give the boolean property its `true` value, the condition will hold (as the PDR is built on the closed world assumption). The automatic action is executed. But should we first reconstruct the role instance, the condition will never hold and the action is not executed.
+
+We don't know what the historic sequence of events was. Or can we? Delta's have a time stamp, so we might execute them in that order. That may save the day - but it need not. A resource does not carry its complete genesis history. If we have assigned a property a value multiple times, only the most recent delta is available. 
+
+Let's try another line of reasoning. An automatic action is just that: an action that is carried out on behalf of a user. Instead of relying on that mechanism, on restoring resources, we might just leave it to the end user. Instead of executing actions automatically, we might leave the decision to do so to him. 
+
+Supposed, of course, that he can actually do so. This will not be the case in general. Let's fantasize for a moment about a very deluxe version of this mechanism. It will make a record of all state transitions with automatic actions and present them to the end user, who can then decide, one by one, which of them to execute. It would involve presenting the model source text to the end user; it would require the end user to understand them. And also to understand the implications of actually re-executing an automatic action. This will not always be the case. Nor will this be a fail safe way to do everything right. During execution of an automatic action, values are constructed _based on state as it is at that moment_. Now, it may well be that different values will be constructed at the moment the list of actions to be curated is presented. 
+
+We can learn from this exercition that, yes, it is possible to restore lost private resources from public ones - but only up to a certain extent.
+
+== Triggering restoration
+As things stand at the moment of writing, only public contexts can be visited. Whether one provides MyContexts with a public context identifier or a public role identifier, it will open the public context (a role cannot be published without its context). 
+
+NOTE: Currently, one can only succesfully open a public context with either the context identifier or that of its external role (contextrole).
+
+Consequently, the restore operation most naturally should be applied to a public context. We may do this by adding a tool in the bar at the top of the screen.

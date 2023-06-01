@@ -6,3 +6,5 @@ include::CORS_related_issues.adoc[leveloffset=2]
 include::internationalization.adoc[leveloffset=2]
 
 include::filetype.adoc[leveloffset=2]
+
+include::restoringresources.adoc[leveloffset=2]

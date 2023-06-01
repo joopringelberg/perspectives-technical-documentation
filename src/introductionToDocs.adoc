@@ -42,6 +42,11 @@ PART III goes into the nitty-gritty of the implementation. Expect the most techn
 * The workings of state synchronization between peers
 * The Foreign Function Interface (FFI)
 
+PART IV discusses a number of models that are essential to the functioning of MyContexts, such as:
+
+* model://perspectives.domains#System
+* model://perspectives.domains#CouchdbManagement
+
 === Other resources
 There are quite a few other resources on the Perspectives project.
 
