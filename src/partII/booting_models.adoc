@@ -65,6 +65,7 @@ perspective of Visitor
 
 Obviously, the value `model://perspect.it/SimpleChat$MyChats` should be customised in each model.
 
+[#booting_the_perspectives_universe]
 == Booting the Perspectives Universe
 A special case of booting has happened during development of Perspectives. We describe it here just in case it has to happen again.
 
@@ -86,3 +87,25 @@ We've taken the following approach to avoid this problem:
 * recompile `model://perspectives.domains#System` and add it to the Repository
 
 Now, each next installation will have a reference to the base repository (it can be found at https://perspectives.domains/cw_servers_and_repositories/perspectives_domains)
+
+=== Compiling the System model
+How do we compile a model _before_ we have a working installation? The developer of the PDR can do so, using a testscript. Here is an example:
+
+[code]
+----
+  test "upload model://perspectives.domains#System to repository from files" $ runP do
+    -- Add a password for "https://localhost:6984/"
+    modify \s@({couchdbCredentials}) -> s {couchdbCredentials = insert "https://localhost:6984/" "geheim" couchdbCredentials}
+    addAllExternalFunctions
+    _ <- loadCompileAndCacheArcFile' "couchdb" modelDirectory
+    _ <- loadCompileAndCacheArcFile' "serialise" modelDirectory
+    _ <- loadCompileAndCacheArcFile' "sensor" modelDirectory
+    _ <- loadCompileAndCacheArcFile' "utilities" modelDirectory
+    errs <- loadCompileAndCacheArcFile' "perspectivesSysteem" modelDirectory
+    dCache <- domeinCache
+    if null errs
+      then uploadToRepository (DomeinFileId "model://perspectives.domains#System")
+      else liftAff $ assert ("There are instance- or model errors for model://perspectives.domains#System: " <> show errs) false
+----
+
+Now notice the call to `uploadToRepository`. It infers the location of a database on the internet from the model identifier. It will be: `https://perspectives.domains/models_perspectives_domains/`. This database *must be available* for the script to run! That is, Couchdb must be installed on the server that hosts perspectives.domains and the database (and its read-version `models_perspectives_domains_read`) must be there. See <<configuring_apache_for_a_domain, ConfigConfiguring an Apache VirtualHost running Couchdb for a domain of perspectives modelsuring>> for details on how to set up Apache for this domain.

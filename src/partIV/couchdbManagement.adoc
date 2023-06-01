@@ -68,3 +68,175 @@ where, obviously, <modelname-expression> should result in the name of the model,
 Similarly, we should carefully name instances of VersionedModelManifest. Instances of the other important types (CouchdbServer, Repository) need not be named.
 
 NOTE: the PDR does not yet construct VersionedModelManifest urls.
+
+[#configuring_apache_for_a_domain]
+=== Configuring an Apache VirtualHost running Couchdb for a domain of perspectives models
+In this paragraph we explore the issue of configuring Apache for a particular domain of Perspectives models. We assume the server runs Couchdb, which is available as an http server on localhost. Apache will forward requests for resources to this local couchdb server.
+
+NOTE: This is different from the situation where a domain is hosted on a server _that does not have a Couchdb installation_. The VirtualHost configuration on such a server must forward requests to another, external server.
+
+As an example we'll use the namespace of the System model, `perspectives.domains` (like `model://perspectives.domains#System`). For this domain, we will configure a VirtualHost in Apache on the relevant server. The VirtualHost starts out like this:
+
+[code]
+----
+<VirtualHost *:443>
+    ServerName https://perspectives.domains
+    ServerAlias *.perspectives.domains
+</VirtualHost>
+----
+
+All requests to `https://perspectives.domains` will now be captured by this virtualhost (assuming, of course, that the DNS refers this domain name to our server).
+
+NOTE: this topic is related to <<booting_the_perspectives_universe, Booting the Perspectives Universe>>
+
+==== Forwarding requests to Couchdb
+In principle, we just want to pass all requests in the `perspectives.domains` namespace to Couchdb. We can use ProxyPass for that. However, we have reason to except some requests (we'll come back to that in the next paragraph), so we use ProxyPassMatch.
+
+[code]
+----
+  ProxyPassMatch "^(?!.*index\.html)(.*)$" "http://localhost:5984/$1"
+  Header edit Set-Cookie (.*) "$1; Secure; Domain=perspectives.domains; SameSite=None;"
+----
+
+Notice that we edit the cookie. Couchdb will return an `AuthSession` cookie when we request it at the `_session` endpoint, presenting our credentials. In order to make the browser keep it and return it with subsequent requests, we have to add some attributes:
+
+* as we forward internally over http, we have to add the *Secure* attribute manually in Apache;
+* Couchdb does not include the Domain attribute. It seems wise (but has not proven to be necessary) to include the domain;
+* we absolutely *must* include the *SameSite* attribute; otherwise the browser will ignore the cookie.
+
+==== Preflight requests
+Given the fact that the PDR runs in the `mycontexts.com` domain and we request resources from the `perspectives.domains` domain, we have to deal with CORS. 
+A problem to solve is that the browser sends a preflight request for .json resources, before it sends a PUT or POST request to store some information in the database on our server. However, Couchdb doesn't accept the OPTIONS method (which goes into the preflight request). So we have to have Apache handle that. We do so using url rewriting:
+
+[code]
+----
+  RewriteEngine On
+  RewriteCond %{REQUEST_METHOD} ^(OPTIONS)$
+  RewriteRule ^/.*$  index.html  [R=204]
+----
+
+Every request using the OPTIONS method is rewritten as a request to a standard resource `index.html` (its content is of no importance). Referring back to the previous paragraph, this explains the condition for ProxyPassMatch:
+
+* we have Apache apply the url rewriting first;
+* and only then do we forward requests to the local Couchdb - in principle any request, _except a request for index.html_!
+
+We force the response code 204 (No content), described by _There is no content to send for this request, but the headers may be useful._. So what headers do we return? 
+
+[code]
+----
+  Header always set Access-Control-Allow-Credentials "true"
+  Header always set Access-Control-Allow-Origin https://mycontexts.com
+  Header always set Access-Control-Allow-Headers "content-type"
+----
+
+Notice that these should be read as server instructions to the browser as to what headers it (the server) will allow in requests from the browser. We should also inform the browser what methods are allowed, but here we need a refinement for the PDR. This is the subject of the next paragraph.
+
+First, however, we have to make absolutely sure that we control these headers, by unsetting them first:
+
+[code]
+----
+  Header unset Access-Control-Allow-Credentials
+  Header unset Access-Control-Allow-Methods
+  Header unset Access-Control-Allow-Origin
+  Header unset Access-Control-Allow-Headers
+----
+
+==== Protecting read databases
+Couchdb authorization is not ideally suited to our needs, as it does not distinghuish between reading and writing to a database. However, we want all users to be able to read models but certainly will not allow all users to modify them! We have solved this issue by creating a separate database to write to, for every database we need. By convention, the name of such a database will end in *_write*. Now, to actually prevent the browser from writing to a read database we have to be careful about the http methods we allow:
+
+  <If "(%{REQUEST_URI} =~ m#(cw_|models_).*/.+$# ) && (%{REQUEST_URI} !~ /.*(_write|_security|_design).*/)">
+    Header always Set Access-Control-Allow-Methods "GET, OPTIONS"
+  </If>
+  <Else>
+    Header always Set Access-Control-Allow-Methods "GET, PUT, POST, DELETE, OPTIONS"
+  </Else>
+
+So while we usually allow all methods, under some conditions we only allow GET and OPTIONS:
+
+* for good measures we restrict ourselves to perspectives databases. Their names, by convention, have to start with *cw_* or *models_*. 
+* Furthermore, we will allow PUT etc. on the database objects themselves - otherwise we cannot create or modify them! This is accomplished by requiring that the url not only contains a database name, but also a resource identifier. For example *cw_perspectives_domains/<some id>*.
+* Then, from the set of urls that satisfy the above conditions, we _exclude_ those to databases whose name ends in *_write*. These are, of course, exactly the databases that we allow writing to!
+* Finally, we also exclude Couchdb endpoints like `_security` and `_design`. Each database has such an endpoint and it is used to set database membership.
+
+==== Certificates
+To complete the treatment, we should of course include references to the necessary certificate and key file for Apache to handle SSL. 
+
+[code]
+----
+  SSLEngine on
+  SSLCertificateFile /path/to/certs/perspectives.domains-2023-certificate.crt
+  SSLCertificateKeyFile /path/to/keys/perspectives.domains-2023-certificate.key
+----
+
+==== Putting it all together
+In the right order, we now have:
+
+[code]
+----
+<VirtualHost *:443>
+  ServerName https://perspectives.domains
+  ServerAlias *.perspectives.domains
+
+  RewriteEngine On
+  RewriteCond %{REQUEST_METHOD} ^(OPTIONS)$
+  RewriteRule ^/.*$  index.html  [R=204]
+
+  ProxyPassMatch "^(?!.*index\.html)(.*)$" "http://localhost:5984/$1"
+  Header edit Set-Cookie (.*) "$1; Secure; Domain=perspectives.domains; SameSite=None;"
+
+  Header unset Access-Control-Allow-Credentials
+  Header unset Access-Control-Allow-Methods
+  Header unset Access-Control-Allow-Origin
+  Header unset Access-Control-Allow-Headers
+
+  Header always set Access-Control-Allow-Credentials "true"
+  Header always set Access-Control-Allow-Origin https://mycontexts.com
+  Header always set Access-Control-Allow-Headers "content-type"
+  <If "(%{REQUEST_URI} =~ m#(cw_|models_).*/.+$# ) && (%{REQUEST_URI} !~ /.*(_write|_security|_design).*/)">
+    Header always Set Access-Control-Allow-Methods "GET, OPTIONS"
+  </If>
+  <Else>
+    Header always Set Access-Control-Allow-Methods "GET, PUT, POST, DELETE, OPTIONS"
+  </Else>
+
+  SSLEngine on
+  SSLCertificateFile /path/to/certs/perspectives.domains-2023-certificate.crt
+  SSLCertificateKeyFile /path/to/keys/perspectives.domains-2023-certificate.key
+</VirtualHost>
+
+Finally, notice that it is useful to add some more instructions like ServerAdmin, DocumentRoot, LogLevel, ErrorLog and CustomLog.
+----
+
+=== Configuring an Apache VirtualHost WITHOUT Couchdb for a domain of perspectives models
+In contrast to the previous paragraph, we here describe a situation for an author with his own domain - we will take `joopringelberg.nl` as example - who wishes to publish models but does not want to install his own Couchdb server. Presuming he finds a provider willing to do that for him, he should then configure his own server to forward requests for Perspectives resources to this provider.
+
+NOTE: a requirement is that the author can configure his own virtual host on the server that the DNS refers the author's domain to.
+
+Assuming a virtual host configuration like this:
+
+[code]
+----
+<VirtualHost *:443>
+  ServerName joopringelberg.nl
+  ServerAlias www.joopringelberg.nl
+<VirtualHost>
+----
+
+that furthermore contains the necessary directives for SSL certificate and key files, we must add the following lines:
+
+[code]
+----
+  SSLProxyEngine on
+  ProxyPassMatch "^/(_session|.*_design|cw_|models_)(.*$)" https://perspectives.domains/$1$2
+  ProxyPassReverseCookieDomain perspectives.domains joopringelberg.nl
+----
+
+Note that we use mod_proxy; this should be enabled for Apache. First of all, we refer any requests for Perspectives resources to the server of the party that hosts Couchdb for us. Notice that we restrict this forwarding to requests to the well-known Perspectives databases and to the necessary Couchdb endpoints, respectively
+
+* databases whose name starts with *cw_* or with *models_*;
+* the server root endpoint *_session*
+* the database endpoint *_design*
+
+Next, we must edit the domain name attribute in the AuthSession cookies that are returned by Couchdb and have their domain name attribute set by the Apache server on perspectives.domains. We change it for our own domain name.
+
+And that's it! This is all it takes to forward the right requests to the server hosting Couchdb.
