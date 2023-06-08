@@ -240,3 +240,57 @@ just like
 ModelsInUser >> binding >> context
 
 (both not and available are functions with a single argument). Functions with more than one argument just lead to multiple queries, as with the join and filter operators.
+
+== What is inverted?
+Query inversion is all about _expressions_ in the Perspectives language. Queries occur in a limited number of lexical situations (that is, in an Perspectives Language source text):
+
+* in the definition of a _calculated role_;
+* in the definition of a _calculated property_;
+* in the _condition of a state_;
+* in the position of operands of _assignment operators_;
+* as _excecutable expressions in notification texts_.
+
+The PDR inverts all of these queries, *except for the operands of assignment operators* and for *excecutable expressions in notification texts*. This shifts the burden of ensuring that a peer has sufficient information to perform a calculation, to the modeller. Consider the following situation:
+
+[code]
+----
+  case Test1
+    user Him
+      perspective on Source
+        props (B) verbs (Consult)
+    thing Source
+      property A (String)
+      property B (String)
+      state A_has_a_value = exists A
+        on entry
+          notify Him
+            "Role Source now has value {A} for property A"
+----
+
+Looking at this example, it is pretty clear that user Him will never be notified of the value of A, even though he may see the role instance of Source with its B value (if some other user creates it). This is because of the design decision mentioned above: that we do not invert expressions in notification texts. Hence, resources mentioned in such texts are not synchronized _because of_ these texts. The fact that the modeller has made clear his intention to notify Him of the value of A does not mean the PDR actually _sends_ such values to Him.
+
+Less conspicuous is the following example:
+
+[code]
+----
+  case Test2
+    thing Source
+      property A (String)
+      property B (String)
+    thing Access = Source
+    thing Destination
+      property C (String)
+    user Her
+      perspective on Access
+        props (A) verbs (Consult)
+        action Doit
+          C = B for context >> Destination
+----
+
+First, notice what _does work_: because of Her's perspective on calculated role Access, another user's PDR will send an instance of Source to Her. And if that other user provides a value to property A of that instance, this value will be sent to Her as well.
+
+But the modeller may find to his surprise that after user Her has executed the action Doit, Destination's property C will not have a value. Why not? Because Her has no perspective on property B of Source. Even though B occurs in an expression in the action (the singleton expression "B", as operand of the property assignment operation "="), this is no cause for the PDR to synchronize values of B to user Her. It is necessary to give Her an explicit perspective on property B. Only then will her PDR receive the B value for role instance Source.
+
+Why this design decision? This is for reasons of complexity and efficiency. Were we to synchronise every resource mentioned in an expression, we would find that the number of inverted queries increases a lot. The same property may occur over and over again and each occurrence would lead to a (duplicated) inverted query. 
+
+We might, of course, try to prevent this duplication but that requires new complexity. Let's introduce the term 'implicit perspective' for a role or property occurring in an operand or notification text. If we were to invert such expression, for each role or property, the PDR would have to find out whether a user has an explicit or implicit perspective on it; if not, it would have to make an implicit perspective and invert it. While not impossible, this requires a quite complex refactoring of the current code.
