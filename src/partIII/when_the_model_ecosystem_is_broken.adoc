@@ -1,0 +1,63 @@
+[desc="The functioning of the Perspectives Universe depends on a number of basic models in the perspectives.domains namespace. The repository holding these models is managed from within a MyContexts installation. In this section we explore various ways this ecosystem can be corrupted and their rescue operations "]
+= When the model ecosystem is broken
+
+Obviously, some models are essential for MyContexts to function correctly. These are:
+
+	model://perspectives.domains#System
+	model://perspectives.domains#Couchdb
+	model://perspectives.domains#Serialise
+	model://perspectives.domains#Sensor
+	model://perspectives.domains#Utilities
+
+However, these models themselves have been created using MyContexts, particularly their machine-readable versions (DomeinFiles). To be able to do so we need yet more models:
+
+	model://perspectives.domains#CouchdbManagement
+	model://perspectives.domains#BodiesWithAccounts
+	model://perspectives.domains#Parsing
+
+Using <<CouchdbManagement>>, we can describe 
+
+* the CouchdbServer that represents the actual server with a CouchdbServer running on it
+* the Repository perspectives.domains for the namespace `model://perspectives.domains/`
+* the Manifests describing the models listed above
+* the Versions that hold the source codes and can compile the DomeinFiles.
+
+There are several ways in which the ecosystem can break down:
+
+. the MyContexts installation from which these descriptions have been published, has been lost, subdivided as
+.. the models and public instances are still available (on the actual server)
+.. just the models are still available
+.. no remote resources are left
+. the MyContexts installation is intact but the remote data is all lost.
+
+== MyContexts lost, models and public instances available
+First, observe that a fresh MyContexts installation can be created without problem. We can also install CouchdbManagement and it will come complete with the CouchdbManagementApp context instance. We just need to re-create the local versions of the published resources, starting with the CouchdbServer itself.
+
+Here we will assume it is possible to restore local resources from public ones, as described in <<restoring_from_public_resources, Restoring from public resources.>> We can trigger the restoration process by bringing an instance of the `CouchdbManagementApp$CouchdbServers` role in a state by providing the property PublicFiller with the value that identifies the external role of the public version of the CouchdbServer instance. On entering that state, we execute a function CopyPublicResource, that will retrieve the external role, followed by the context and its roles, recursively until the entire remotely available structure has been restored locally.
+
+[#only_models_available]
+== MyContexts lost, just models are available
+Restore the ecosystem as follows:
+
+* make models available in the models_perspectives_domains database _without_ version numbers. This is because the function `retrieveDomeinFile` will not find any manifests and thus will load versionless models. 
+* It is now possible to create a fresh MyContexts installation, but it will have no BaseRepository and thus no list of models. 
+* However, it should be possible to add CouchdbManagement to the installation. To this end, we've created a state of PerspectivesSystem that provides an action to User to do so.
+* Once CouchdbManagement is available, create the CouchdbServer, the Repository, the Manifests and their Versions and add the source code of the models.
+
+== Everything is lost
+Assuming there is a copy of the essential DomeinFiles, 
+
+* recreate the databases models_perspectives_domains and models_perspectives_domains_write (make sure they have no members, so are publicly accessible);
+* replicate from the write database to the read database;
+* replicate from the copy to the write database;
+* follow the procedure given in <<only_models_available, the previous paragraph>>.
+
+== Public databases have been lost but the MyContexts installation is intact
+We have as yet no procedure for this case. It should be rare; it is entirely possible to protect against this situation by creating regular backups at the system level of the Couchdb databases on https://perspectives.domains.
+
+== Precautions to be taken
+In order to prepare for the eventualities given above, it is imperative to 
+
+* maintain a copy of the basic models in a safe place, ideally a CouchdbServer instance from which it is possible to restore them to the server at https://perspectives.domains.
+* keep a copy the source code of the basic models, lest they be lost forever with the Versions;
+* create backups at the system level of https://perspectives.domains, at the very least of the Couchdb installation.

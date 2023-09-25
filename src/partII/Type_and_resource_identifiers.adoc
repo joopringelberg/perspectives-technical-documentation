@@ -485,6 +485,9 @@ where <expression> can yield an identifier in the remote scheme. We can create a
 
 It can be easier than that. The author of an enclosed page might drop a role taken from a public context onto it, thereby creating a new role whose filler has the remote scheme. 
 
+=== No backlinks from a public role!
+In order to be able to traverse a role filler relationship quickly, we not only keep a link from a role to its filler, but also to all the roles it fills. We call these _backlinks_. However, if a _public role is used as filler_, we register no backlinks on it. In most cases, the resource in the public location cannot be changed by the Visitor of that location. This would prohibit creating a private role filled with the public role.
+
 === When a Visitor adds a role to a public context
 Let's start out by noting that a Visitor should not have a perspective that allows her to modify the _public facing_ perspective on a context. However, should there be an unlinked role in the public context, she might be able to add an instance to that. The scope of that instance would be restricted to her own umwelt. But it might be shared, too, with for example the contexts' Author. He would then keep the instance in his own umwelt (the scope of the instance would include both this single Visitor and the Author). 
 Now think of the deltas the Visitor sends to the Author. It should include a ContextDelta. What shape does the identifier of the context take? Is it the full remote address, or just the guid? Since the Author keeps the instance in his own Umwelt, he gets to decide where to store it - so the delta should just have the guid. As a consequence, this situation is no exception to the general rule that says that deltas should be in terms of guids without their storage schemes.

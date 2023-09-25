@@ -1,4 +1,5 @@
 [desc="Restoring the private version of a resource from public versions."]
+[#restoring_from_public_resources]
 = Restoring from public resources
 
 WARNING: Functionality described in this section has not yet been implemented.

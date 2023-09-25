@@ -1,3 +1,3 @@
 # Publish the tutorial to inplace.works
 
-scp -r ./output/* joop@inplace.works:/var/www/mycontexts.com/techdoc
+scp -r ./output/* joop@mycontexts.com:/var/www/mycontexts.com/techdoc

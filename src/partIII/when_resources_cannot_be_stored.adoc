@@ -1,0 +1,52 @@
+[desc="The users' resources may be stored locally, or remotely. In the latter case, problems arise if no network connection is available, the user (no longer) has no sufficient authorization to access the remote storage, or the remote storage malfunctions. Here we explore how to maintain system integrity in the face of these problems."]
+[#when_resources_cannot_be_stored]
+= When resources cannot be stored or retrieved
+
+The users' resources may be stored locally, or remotely. In the latter case, problems arise if no network connection is available, the user (no longer) has no sufficient authorization to access the remote storage, or the remote storage malfunctions. How should we deal with such problems?
+
+NOTE: The functionality in this section has not yet been implemented.
+
+== Recognise the various situations
+First, we should be able to distinghuish the following cases:
+
+* there is no netwerk (i.e. access to the internet is unavailable);
+* the user has insufficient or no authorization to perform the storage operation;
+* malfunctioning of the remote storage system (a rest category)
+
+=== Being offline
+This can be readily detected in the browser, as documented on MDN: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/onLine.
+A caveat is in place, however. If `onLine` property is `false`, it is safe to assume that the system has no internet connection. However, when it is `true`, there is no guarantee that it actually has connection.
+
+=== Authorization
+The PDR implements 'just after the fact' authorization: it assumes it can access a resource and when that fails, tries to authenticate. Building on that, we consider the situation that accessing a resource fails _again_ after authentication, to be an authorization issue *unless* it can be shown that the browser is offline.
+
+Notice that we cannot distinghuish having _no authorization_ from having _insufficient authorization_. So it may be the case that the user can identify herself at a specific endpoint, yet still not is provided access to a particular database.
+
+=== Other cases
+As this is a rest category, we'll treat all other situations in this category.
+
+== Options for handling these cases
+In all cases, we will
+
+* inform the end user;
+* save a resource that could not be stored, in a local database (where we assume it will always be available). This database is called the `stash`.
+* try to ignore the fact that we could not read a resource.
+
+The success (or effect) of latter strategy depends on the situation. We have built-in error boundaries on getting resources (look for situations in the code where a ContextErrorBoundary or RolErrorBoundary is generated).
+
+When the system comes online again (see the same MDN section on the `window.online` event), we'll try to save any resources put temporarily aside in the stash. Also, on system startup, we'll check the stash. Notice that resource identifiers contain information on where to put them or retrieve them from.
+
+Notice that the PDR has cache that will keep these resources in memory. However, as this is a Least-Recently-Used case, there is no guarantee that the resource will remain in the cache.
+
+We do not yet try to reload resources that cannot be read from a remote location from the stash.
+
+=== Handling being offline
+Having been notified that connection has been lost (or has not been established) the user should take appropriate action. This is a relatively harmless situation.
+
+=== Handling Authorization problems
+It may not be easy for the end user to handle this situation. However, there may be cases where (s)he recognises that (s)he could add credentials to the installation, for the given remote storage location. After adding them, restarting the system should be enough to have the resources put into the stash stored away in their intended remote location.
+
+All in all, we will inform the end user about the remote endpoint for which no credentials are found.
+
+=== Other cases
+Again, it may be difficult for the end user to act. It all depends on the remote situation.

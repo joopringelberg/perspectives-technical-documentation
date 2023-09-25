@@ -6,7 +6,7 @@ In previous chapters, we've given a lot of detail concerning
 * <<_models,Models>>
 * <<_type_and_resource_identifiers,Type and Resource Identifiers>>.
 
-In the current chapter, we build on those concepts to describe how a particular Perspectives model in the namespace `perspectives.domains` is used in MyContexts to manage models on the internet.
+In the current chapter, we build on those concepts to describe how a particular Perspectives model in the namespace `+perspectives.domains+` is used in MyContexts to manage models on the internet.
 
 === Overview
 The main concepts in this model are
@@ -16,42 +16,42 @@ The main concepts in this model are
   - ModelManifest
   - VersionedModelManifest.
 
-A CouchdbServer instance describes a particular, existing server on the open internet. Its address is registered in the CouchdbServer instance. A Couchdb installation should be present on that server and the Perspectives user creating the CouchdbServer instance should have Admin credentials for this Couchdb installation. The credentials must be entered in MyContexts; they are added to the CouchdbServer$Admin role. For this CouchdbServer instance, a database is created with the standard name `cw_servers_and_repositories`. 
+A CouchdbServer instance describes a particular, existing server on the open internet. Its address is registered in the CouchdbServer instance. A Couchdb installation should be present on that server and the Perspectives user creating the CouchdbServer instance should have Admin credentials for this Couchdb installation. The credentials must be entered in MyContexts; they are added to the CouchdbServer$Admin role. For this CouchdbServer instance, a database is created with the standard name `+cw_servers_and_repositories+`. 
 
-CouchdbServer has a Visitor role that publishes to this database. Hence, a public version of the CouchdbServer instance is available at this publicly accessible URL. The Visitor has a perspective on PublicRepositories, a filtered version of the role Repositories that is filled with Repository instances. These instances have a public Visitor role, too; it publishes to the same `cw_servers_and_repositories` database. Consequently, a Visitor can navigate from a CouchdbServer to its (public) Repositories (there may be private Repositories, too) and his PDR retrieves all these instances from the same database.
+CouchdbServer has a Visitor role that publishes to this database. Hence, a public version of the CouchdbServer instance is available at this publicly accessible URL. The Visitor has a perspective on PublicRepositories, a filtered version of the role Repositories that is filled with Repository instances. These instances have a public Visitor role, too; it publishes to the same `+cw_servers_and_repositories+` database. Consequently, a Visitor can navigate from a CouchdbServer to its (public) Repositories (there may be private Repositories, too) and his PDR retrieves all these instances from the same database.
 
-Within a Repository, the Visitor has a perspective on a role Manifests filled with ModelManifest. However, Manifests are grouped by namespace. For example, both the System model and the CouchdbManagement model are in the `perspectives.domains` namespace. The PDR translates a model URI like `model://perspectives.domains#Systems` automatically to a URL that retrieves the compiled model (the DomeinFile). In doing so, it assumes that the DomeinFile is in a database whose name is derived from the namespace. In our example this will be the database `models_perspectives_domains`. It also derives a URL from the model URI that points to the models Manifest. It assumes this manifest is in the database `cw_perspectives_domains`.
+Within a Repository, the Visitor has a perspective on a role Manifests filled with ModelManifest. However, Manifests are grouped by namespace. For example, both the System model and the CouchdbManagement model are in the `+perspectives.domains+` namespace. The PDR translates a model URI like `+model://perspectives.domains#Systems+` automatically to a URL that retrieves the compiled model (the DomeinFile). In doing so, it assumes that the DomeinFile is in a database whose name is derived from the namespace. In our example this will be the database `+models_perspectives_domains+`. It also derives a URL from the model URI that points to the models Manifest. It assumes this manifest is in the database `+cw_perspectives_domains+`.
 
 Now we have the following situation:
 
-* the Repository instance describing the namespace perspectives.domains is expected in the `cw_servers_and_repositories` database
-* the CouchdbManagement and System ModelManifest files are expected in the `cw_perspectives_domains` database.
+* the Repository instance describing the namespace perspectives.domains is expected in the `+cw_servers_and_repositories+` database
+* the CouchdbManagement and System ModelManifest files are expected in the `+cw_perspectives_domains+` database.
 
-ModelManifest has a Visitor role, too. The instance that is associated with the namespace `perspectives.domains` publishes to the `cw_perspectives_domains` database. We now have everything in its place, because, for example, the ModelManifest describing the CouchdbManagement model is, indeed, stored in the database where the PDR expects it to be.
+ModelManifest has a Visitor role, too. The instance that is associated with the namespace `+perspectives.domains+` publishes to the `+cw_perspectives_domains+` database. We now have everything in its place, because, for example, the ModelManifest describing the CouchdbManagement model is, indeed, stored in the database where the PDR expects it to be.
 
 === An aside: how does this work?
-Consider for a moment an Admin role who adds a ModelManifest to the Repository for the `perspectives.domains` namespace. In his own PDR installation, the modified Repository instance, the new Manifests role instance and contexts and roles describing the new ModelManifest will be stored in his own local repositories. But because of the public roles, versions of these resources should be published as well. Let's look in detail to some of these resources:
+Consider for a moment an Admin role who adds a ModelManifest to the Repository for the `+perspectives.domains+` namespace. In his own PDR installation, the modified Repository instance, the new Manifests role instance and contexts and roles describing the new ModelManifest will be stored in his own local repositories. But because of the public roles, versions of these resources should be published as well. Let's look in detail to some of these resources:
 
-* the new Manifests role is within scope of Repository$Visitor and thus will be published to `cw_servers_and_repositories`
-* however, its filler, the external role of ModelManifest, is within scope of ModelManifest$Visitor and should be published to `cw_perspectives_domains`!
+* the new Manifests role is within scope of Repository$Visitor and thus will be published to `+cw_servers_and_repositories+`
+* however, its filler, the external role of ModelManifest, is within scope of ModelManifest$Visitor and should be published to `+cw_perspectives_domains+`!
 
-Consequently, the url of the Manifests role will be like this: `https://perspectives.domains/cw_servers_and_repositories/<guid1>`. But the url of the filler, the external role of ModelManifest, will be like this: `https://perspectives.domains/cw_perspectives_domains/<guid1>`. It appears that, on publishing, the PDR should look up the public url for each context type. If a context has a public role, the PDR should use it; otherwise the PDR just uses the public url of the publishing role. So, because the filler is a role of ModelManifest, the PDR uses its public URL to construct a pub: identifier.
+Consequently, the url of the Manifests role will be like this: `+https://perspectives.domains/cw_servers_and_repositories/<guid1>+`. But the url of the filler, the external role of ModelManifest, will be like this: `+https://perspectives.domains/cw_perspectives_domains/<guid1>+`. It appears that, on publishing, the PDR should look up the public url for each context type. If a context has a public role, the PDR should use it; otherwise the PDR just uses the public url of the publishing role. So, because the filler is a role of ModelManifest, the PDR uses its public URL to construct a pub: identifier.
 
-Should it actually publish the external role itself (to the `cw_perspectives_domains` database)? It can only do so if the end user (or rather the Admin roles he plays) has the credentials that allow him to do so. To make that explicit: a Repository$Admin creating a new ModelManifest should have write access to 
+Should it actually publish the external role itself (to the `+cw_perspectives_domains+` database)? It can only do so if the end user (or rather the Admin roles he plays) has the credentials that allow him to do so. To make that explicit: a Repository$Admin creating a new ModelManifest should have write access to 
 
-* the `cw_servers_and_repositories` database for the CouchdbServer;
-* the `cw_perspectives_domains` database, or, in general, the database that holds the ModelManifest instances for the namespace described by the Repository.
+* the `+cw_servers_and_repositories+` database for the CouchdbServer;
+* the `+cw_perspectives_domains+` database, or, in general, the database that holds the ModelManifest instances for the namespace described by the Repository.
 
-We can actually arrange that in `model://perspectives.domains#CouchdbManagement`, and we should and have done so. So, under these circumstances: yes, the PDR should publish not only the new Manifests role instance, but also all role- and the context instances describing the new ModelManifest.
+We can actually arrange that in `+model://perspectives.domains#CouchdbManagement+`, and we should and have done so. So, under these circumstances: yes, the PDR should publish not only the new Manifests role instance, but also all role- and the context instances describing the new ModelManifest.
 
 We consider this to be a model pattern. A user role with the perspectives to create a new context, where both the embedded context role and the new context have a public perspective, should have write access rights to both databases.
 
-Now what if a user role has the perspective to create a new embedded context role _that is filled with an existing public role_? That is, its filler has the `pub:` scheme? In this case, the user role does not necessarily have the perspective to create such public roles (i.e. someone else made that role instance). However, _his own version of that embedded context role will also be filled with an identifier in the `pub:` scheme_. And on publishing, we just leave such references intact. All is well!
+Now what if a user role has the perspective to create a new embedded context role _that is filled with an existing public role_? That is, its filler has the `+pub:+` scheme? In this case, the user role does not necessarily have the perspective to create such public roles (i.e. someone else made that role instance). However, _his own version of that embedded context role will also be filled with an identifier in the `+pub:+` scheme_. And on publishing, we just leave such references intact. All is well!
 
 === URL Rewriting Revisited
-Consider the namespace `perspectives.domains`. It's Repository is associated with the database cw_perspectives_domains. In this database, we'll find the ModelManifests for all models in the `perspectives.domains` namespace, like model://`perspectives.domains#System`. The URL of that ModelManifest can be derived directly from the model URI: https://perspectives.domains/cw_perspectives_domains/perspectives_domains-System.json. 
+Consider the namespace `+perspectives.domains+`. It's Repository is associated with the database cw_perspectives_domains. In this database, we'll find the ModelManifests for all models in the `+perspectives.domains+` namespace, like model://`+perspectives.domains#System+`. The URL of that ModelManifest can be derived directly from the model URI: https://perspectives.domains/cw_perspectives_domains/perspectives_domains-System.json. 
 
-Now consider the namespace `joopringelberg.nl`. Let's suppose it's Repository, too, is hosted in the CouchdbServer at https://perspectives.domains. Consequently, there will be a database cw_joopringelberg_nl holding the ModelManifests for models in this namespace, like for example `model://joopringelberg.nl#MyModel`. The PDR will derive the following URL for the ModelManifest for that model: `https://joopringelberg.nl/cw_joopringelberg_nl/MyModel`. But now we have a problem, because the manifest isn't at joopringelberg.nl, it is at perspectives.domains!
+Now consider the namespace `+joopringelberg.nl+`. Let's suppose it's Repository, too, is hosted in the CouchdbServer at https://perspectives.domains. Consequently, there will be a database cw_joopringelberg_nl holding the ModelManifests for models in this namespace, like for example `+model://joopringelberg.nl#MyModel+`. The PDR will derive the following URL for the ModelManifest for that model: `+https://joopringelberg.nl/cw_joopringelberg_nl/MyModel+`. But now we have a problem, because the manifest isn't at joopringelberg.nl, it is at perspectives.domains!
 
 We must solve this problem by rewriting the URL of the manifest on the server that hosts joopringelberg.nl. It should swap the authority of all ModelManifest urls with perspectives.domains. See <<configuring_apache_for_a_domain_without_couchdb,this paragraph>> for how to configure Apache.
 
@@ -75,7 +75,7 @@ In this paragraph we explore the issue of configuring Apache for a particular do
 
 NOTE: This is different from the situation where a domain is hosted on a server _that does not have a Couchdb installation_. The VirtualHost configuration on such a server must forward requests to another, external server. See <<configuring_apache_for_a_domain_without_couchdb, the next paragraph>> for that.
 
-As an example we'll use the namespace of the System model, `perspectives.domains` (like `model://perspectives.domains#System`). For this domain, we will configure a VirtualHost in Apache on the relevant server. The VirtualHost starts out like this:
+As an example we'll use the namespace of the System model, `+perspectives.domains+` (like `+model://perspectives.domains#System+`). For this domain, we will configure a VirtualHost in Apache on the relevant server. The VirtualHost starts out like this:
 
 [code]
 ----
@@ -85,12 +85,12 @@ As an example we'll use the namespace of the System model, `perspectives.domains
 </VirtualHost>
 ----
 
-All requests to `https://perspectives.domains` will now be captured by this virtualhost (assuming, of course, that the DNS refers this domain name to our server).
+All requests to `+https://perspectives.domains+` will now be captured by this virtualhost (assuming, of course, that the DNS refers this domain name to our server).
 
 NOTE: this topic is related to <<booting_the_perspectives_universe, Booting the Perspectives Universe>>
 
 ==== Forwarding requests to Couchdb
-In principle, we just want to pass all requests in the `perspectives.domains` namespace to Couchdb. We can use ProxyPass for that. However, we have reason to except some requests (we'll come back to that in the next paragraph), so we use ProxyPassMatch.
+In principle, we just want to pass all requests in the `+perspectives.domains+` namespace to Couchdb. We can use ProxyPass for that. However, we have reason to except some requests (we'll come back to that in the next paragraph), so we use ProxyPassMatch.
 
 [code]
 ----
@@ -98,14 +98,14 @@ In principle, we just want to pass all requests in the `perspectives.domains` na
   Header edit Set-Cookie (.*) "$1; Secure; Domain=perspectives.domains; SameSite=None;"
 ----
 
-Notice that we edit the cookie. Couchdb will return an `AuthSession` cookie when we request it at the `_session` endpoint, presenting our credentials. In order to make the browser keep it and return it with subsequent requests, we have to add some attributes:
+Notice that we edit the cookie. Couchdb will return an `+AuthSession+` cookie when we request it at the `+_session+` endpoint, presenting our credentials. In order to make the browser keep it and return it with subsequent requests, we have to add some attributes:
 
 * as we forward internally over http, we have to add the *Secure* attribute manually in Apache;
 * Couchdb does not include the Domain attribute. It seems wise (but has not proven to be necessary) to include the domain;
 * we absolutely *must* include the *SameSite* attribute; otherwise the browser will ignore the cookie.
 
 ==== Preflight requests
-Given the fact that the PDR runs in the `mycontexts.com` domain and we request resources from the `perspectives.domains` domain, we have to deal with CORS. 
+Given the fact that the PDR runs in the `+mycontexts.com+` domain and we request resources from the `+perspectives.domains+` domain, we have to deal with CORS. 
 A problem to solve is that the browser sends a preflight request for .json resources, before it sends a PUT or POST request to store some information in the database on our server. However, Couchdb doesn't accept the OPTIONS method (which goes into the preflight request). So we have to have Apache handle that. We do so using url rewriting:
 
 [code]
@@ -115,7 +115,7 @@ A problem to solve is that the browser sends a preflight request for .json resou
   RewriteRule ^/.*$  index.html  [R=204]
 ----
 
-Every request using the OPTIONS method is rewritten as a request to a standard resource `index.html` (its content is of no importance). Referring back to the previous paragraph, this explains the condition for ProxyPassMatch:
+Every request using the OPTIONS method is rewritten as a request to a standard resource `+index.html+` (its content is of no importance). Referring back to the previous paragraph, this explains the condition for ProxyPassMatch:
 
 * we have Apache apply the url rewriting first;
 * and only then do we forward requests to the local Couchdb - in principle any request, _except a request for index.html_!
@@ -140,23 +140,6 @@ First, however, we have to make absolutely sure that we control these headers, b
   Header unset Access-Control-Allow-Origin
   Header unset Access-Control-Allow-Headers
 ----
-
-==== Protecting read databases
-Couchdb authorization is not ideally suited to our needs, as it does not distinghuish between reading and writing to a database. However, we want all users to be able to read models but certainly will not allow all users to modify them! We have solved this issue by creating a separate database to write to, for every database we need. By convention, the name of such a database will end in *_write*. Now, to actually prevent the browser from writing to a read database we have to be careful about the http methods we allow:
-
-  <If "(%{REQUEST_URI} =~ m#(cw_|models_).*/.+$# ) && (%{REQUEST_URI} !~ /.*(_write|_security|_design).*/)">
-    Header always Set Access-Control-Allow-Methods "GET, OPTIONS"
-  </If>
-  <Else>
-    Header always Set Access-Control-Allow-Methods "GET, PUT, POST, DELETE, OPTIONS"
-  </Else>
-
-So while we usually allow all methods, under some conditions we only allow GET and OPTIONS:
-
-* for good measures we restrict ourselves to perspectives databases. Their names, by convention, have to start with *cw_* or *models_*. 
-* Furthermore, we will allow PUT etc. on the database objects themselves - otherwise we cannot create or modify them! This is accomplished by requiring that the url not only contains a database name, but also a resource identifier. For example *cw_perspectives_domains/<some id>*.
-* Then, from the set of urls that satisfy the above conditions, we _exclude_ those to databases whose name ends in *_write*. These are, of course, exactly the databases that we allow writing to!
-* Finally, we also exclude Couchdb endpoints like `_security` and `_design`. Each database has such an endpoint and it is used to set database membership.
 
 ==== Certificates
 To complete the treatment, we should of course include references to the necessary certificate and key file for Apache to handle SSL. 
@@ -192,13 +175,8 @@ In the right order, we now have:
   Header always set Access-Control-Allow-Credentials "true"
   Header always set Access-Control-Allow-Origin https://mycontexts.com
   Header always set Access-Control-Allow-Headers "content-type"
-  <If "(%{REQUEST_URI} =~ m#(cw_|models_).*/.+$# ) && (%{REQUEST_URI} !~ /.*(_write|_security|_design).*/)">
-    Header always Set Access-Control-Allow-Methods "GET, OPTIONS"
-  </If>
-  <Else>
-    Header always Set Access-Control-Allow-Methods "GET, PUT, POST, DELETE, OPTIONS"
-  </Else>
-
+  Header always Set Access-Control-Allow-Methods "GET, PUT, POST, DELETE, OPTIONS"
+  
   SSLEngine on
   SSLCertificateFile /path/to/certs/perspectives.domains-2023-certificate.crt
   SSLCertificateKeyFile /path/to/keys/perspectives.domains-2023-certificate.key
@@ -209,7 +187,7 @@ Finally, notice that it is useful to add some more instructions like ServerAdmin
 
 [#configuring_apache_for_a_domain_without_couchdb]
 === Configuring an Apache VirtualHost WITHOUT Couchdb for a domain of perspectives models
-In contrast to the previous paragraph, we here describe a situation for an author with his own domain - we will take `joopringelberg.nl` as example - who wishes to publish models but does not want to install his own Couchdb server. Presuming he finds a provider willing to do that for him, he should then configure his own server to forward requests for Perspectives resources to this provider.
+In contrast to the previous paragraph, we here describe a situation for an author with his own domain - we will take `+joopringelberg.nl+` as example - who wishes to publish models but does not want to install his own Couchdb server. Presuming he finds a provider willing to do that for him, he should then configure his own server to forward requests for Perspectives resources to this provider.
 
 NOTE: a requirement is that the author can configure his own virtual host on the server that the DNS refers the author's domain to.
 
