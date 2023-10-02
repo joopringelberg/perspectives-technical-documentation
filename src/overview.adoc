@@ -67,6 +67,8 @@ include::partIII/synchronizationRevisited.adoc[]
 
 include::partIII/ffi.adoc[]
 
+include::partIII/internal_representation.adoc[]
+
 include::partIII/varioustopics.adoc[]
 
 = PART IV. ESSENTIAL MODELS

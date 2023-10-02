@@ -1,0 +1,34 @@
+[desc="In which we describe how values, represented as strings, are converted and formatted."]
+= Value Representation
+
+Values of properties are internally represented with the `Value` type. `Value` is a newtype of String, raising three questions:
+
+* how are numbers, booleans, dates and files represented in Purescript?
+* how are numbers, booleans, dates and files serialised before being sent to the database?
+* what do the functions generated from QueryFunctionDescriptions operate on, for other ranges than PString?
+
+First of all, we should not confuse Ranges with Values. `Range` is a data structure used on the type level to _represent_ properties having various runtime types. These are the valid ranges:
+
+[code]
+----
+data Range = PString | PBool | PNumber | PDate | PEmail | PFile
+----
+
+PBool, PNumber and PEmail are easily cast to and read from String values. The Encode and Decode classes from Foreign.Class handle it out of the box. Not so for PFile and PDate.
+
+== Encoding and decoding PDate
+In Purescript, we represent PDate range values as DateTime. Or, actually, as SerializableDateTime data (a newtype that has Decode and Encode instances, in contrast to DateTime). Encoding a DateTime yields the encoding of an Integer value (a String). This is the `Epoch` value that Javascript converts Date objects to.
+
+In the module `Perspectives.Query.UnsafeCompiler`, we create functions from descriptions that handle PDate values (currently just for comparing PDate values). We do so by `casting` the String we take from Value as Foreign and then decoding it as a DateTime. We then have the functions operate on these DateTime data instances.
+
+Special attention was required for the SmartFieldControl (in the Perspectives React library). This control gets values from the PDR in String form (the string representation of the Epoch value). We first have to convert it to the String representation that the HTML input control accepts, like: `"2017-06-01T08:30"` (see: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/datetime-local[<input type="datetime-local">] on MDN).
+
+Before sending a new or changed value back to the PDR, we have to convert it back to the Epoch form.
+
+== PDate values in Perspective Language source code
+It is possible to enter a DateTime literal in Perspectives Language source code. Such a value should be enclosed in double quotes. It requires a specific format. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#Date_Time_String_Format for the supported string format of the date. Summary: the type must conform to YYYY-MM-DDTHH:mm:ss.sssZ, but time may be left out.
+
+Notice that this is _another_ format than the form that is required by the Input control!
+
+== PFile
+This range is described in a lot of detail in <<range_pfile>>.

@@ -1,3 +1,4 @@
+[[range_pfile]]
 [desc="A property range type `file` to handle files in Perspectives."]
 = The range type PFile
 

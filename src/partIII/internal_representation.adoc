@@ -1,0 +1,7 @@
+[desc="The internal representation of resources"]
+== Internal Representation
+
+Mostly, the representation in Purescript data structures can be readily understood from the source code. In this chapter we elucidate some design choices and elaborate some facets.
+
+include::Value_Representation.adoc[leveloffset=2]
+
