@@ -69,6 +69,8 @@ include::partIII/ffi.adoc[]
 
 include::partIII/internal_representation.adoc[]
 
+include::partIII/security.adoc[]
+
 include::partIII/varioustopics.adoc[]
 
 = PART IV. ESSENTIAL MODELS

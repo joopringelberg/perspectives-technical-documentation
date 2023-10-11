@@ -1,0 +1,26 @@
+[desc="A list of things to do before going into production in order to make the system more secure."]
+== Security To-Do list
+
+=== Plain text passwords in setting up connection with RabbitMQ / generating passwords
+Currently, each time the connection with RabbitMQ is made (at least once per session), the users password for her RabbitMQ account is sent in plaintext to the server. The connection is safe (SSL). Nevertheless, it would add to security of the user if it were possible to have RabbitMQ safe not the plaintext password but a hash of it. The client then hashes the password before requesting a connnection.
+
+On the one hand, if a man-in-the-middle intercepts the hashed password, he can use it to connect to RabbitMQ on behalf of the user. On the other hand, the user's password is not compromised. As users tend to re-use passwords over accounts, hashing passwords adds a benefit.
+
+All this should be weighed against the possibility to have the manager of the RabbitMQ server _generate_ a long password. As the end user stores this password and never needs to enter it manually, this is a good alternative.
+
+This also protects the end user from brute-forcing passwords.
+
+=== Plain text password information in fields
+Several user roles in `model://perspectives.domains#CouchdbManagement` have screens that show end-user's passwords in plain text. This is not recommended. A solution would be to introduce a Range type password (PPassword) and have the smartFieldControl generate inputs whose contents are by default not readable.
+
+=== Encrypting the contents of Deltas
+A Delta is part of a Transaction as sent from one user to another. It describes a state-changing operation to be performed on the receivers system. Currently, this information is not encrypted but in plain text. Consider encrypting delta contents before sending it off.
+
+=== System identifier / User identifier
+Currently, the identifier of the sys:PerspectivesSystem instance and of its User role is derived from the username the end user chooses on setting up an account on a device. Instead, generate a CUID, at least for PerspectivesSystem or for both.
+
+=== Store the local password in hashed form
+When an end user sets up an installation that stores its data in a Couchdb installation, she must enter the password of that Couchdb installation. Currently, this password is stored in plain text in IndexedDB. It should be hashed instead.
+
+=== Store passwords for Couchdb installations in encrypted form
+Currently, passwords administered through `model://perspectives.domains#CouchdbManagement` are stored in plain text in role instances. Instead, encrypt them and decrypt before setting up a session with Couchdb.

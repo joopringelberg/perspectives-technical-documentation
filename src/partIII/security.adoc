@@ -1,0 +1,8 @@
+[desc="Security issues: threat model, design decisions to be reconsidered and a to-do list."]
+== Security
+
+Being a distributed system, Perspectives does not suffer from the well-known typical vulnerabilities of client-server model applications. This is not to say that no threats exist. Moreover, during development, some design decisions relevant to the security of the system have been taken mostly with the eye on ease of development, such as unencrypted delta texts. In order not to forget these when going into production, we list them here.
+
+include::threat_model.adoc[leveloffset=1]
+
+include::security_to_do.adoc[leveloffset=1]
