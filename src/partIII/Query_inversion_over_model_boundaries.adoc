@@ -34,8 +34,8 @@ We organise the loose ends by model, first, so we can apply a whole bunch of the
 
 Next, we observe that we have to distribute the inverted queries over five collections:
 
-* onContextDelta_context
-* onContextDelta_role
+* contextInvertedQueries
+* invertedQueries
 * onRoleDelta_binding
 * onRoleDelta_binder
 * onPropertyDelta.

@@ -8,12 +8,12 @@ The question is: how do we implement this mechanism? The situation is further co
 
 == Inverting queries
 
-Imagine a query as a piping system, fanning out from some context with a user for whom actions are carried ot automatically. Call it an _automatic user context_. Role instances and property values ‘flow’ from _source contexts_ through the pipes to the automatic user context and the combined and filtered result ends up as a Boolean value. It is as if the automatic user context ‘pulls’ items towards it.
+Imagine a query as a piping system, fanning out from some context with a user for whom actions are carried ot automatically. Call this context an _automatic user context_. Role instances and property values ‘flow’ to it from _source contexts_ through the pipes. It is as if the automatic user context ‘pulls’ items towards it.
 
 [quote]
-In general, queries are computed roles or computed properties. The condition of a state is a computed property with a Boolean value.]
+In general, queries are computed roles or computed properties. The condition of a state is a computed property with a Boolean value.
 
-Now switch your point of view and ‘look through’ the same pipes from the other end. Looking from some source context, we see automatic user contexts at the other end. In other words, invert the queries. As contexts and roles form a graph constructed from bindings that fans out and fans in, the inverse queries again travel over a subnetworks that are trees. But this time these queries will pull in automatic user contexts.
+Now switch your point of view and ‘look through’ the same pipes from the other end. Looking from some source context, we see automatic user contexts at the other end. In other words, invert the queries. As contexts and roles form a graph constructed from fill relations that fan out (or fans in if you look from the other direction), the inverse queries again travel over a subnetworks that are trees. But this time these queries will pull in automatic user contexts to a source context.
 
 This solves the sleeping context problem. A change to a context or role or property can only be realised when that context is in memory. If the Perspectives distributed runtime (PDR) receives a delta (the unit of description of change) from some other PDR, it will first retrieve the affected context or role into the computer memory. Now, if it is a source with respect to the condition (query) of a state of some other context, it will have inverted queries. The PDR runs these queries and thereby retrieves all automatic user contexts that depend on it, fetching them from disk if necessary. In the process, it fetches all roles and contexts on the path between them. It then runs the rules in those contexts. The conditions of those rules will pull in further role instances and values. The changed or new item will be one of them (or it will be missing if it was removed), possibly leading to a different Boolean result from before the change.
 
@@ -21,18 +21,18 @@ This solves the sleeping context problem. A change to a context or role or prope
 
 Queries are stored in a model file in the form of a _description_ (See module `Perspectives.Query.QueryTypes`). Such a description holds the domain and range of the query function, and a description of the actual computation. It turns out that we can turn this description inside out, as it were, ending up with a description of an inverted query.
 
-Consider the straightforward case of a query that is just a composition of simple steps – a path. The inverse query is just the inversion of each individual step, run in inverse order (starting with the last step first). But can we invert each simple step? Yes we can (Except for roles computed by _external_ functions that have no inversion). Remember that with a query we traverse the network that consists of contexts and roles, connected through role binding. The simple steps are:
+Consider the straightforward case of a query that is just a composition of simple steps – a path. The inverse query is just the inversion of each individual step, run in inverse order (starting with the last step first). But can we invert each simple step? Yes we can (Except for roles computed by _external_ functions that have no inversion). Remember that with a query we traverse the network that consists of contexts and roles, connected through fills relations. The simple steps are:
 
 * Move from a role to its context;
 * Move from a context to some role;
-* Move from a role to its binding;
-* Move from a role to its binder.
+* Move from a role to its filler;
+* Move from a role to its filled role.
 
-Each role has a single context and a single binding (this is not so in the generalised version of Perspectives where a role can have multiple bindings). However, contexts can have many roles and roles can be bound by many other roles. So the inverse function of role-instance-to-context-instance must be a function that is informed with the _type_ of the role instance. The same holds for the inverse function of role-instance-to-binding.
+Each role has a single context and a single filler (this is not so in the generalised version of Perspectives where a role can have multiple fillers). However, contexts can have many roles and roles can be fill many other roles. So the inverse function of role-instance-to-context-instance must be a function that is informed with the _type_ of the role instance. The same holds for the inverse function of role-instance-to-filler.
 
 But this information is available in the query function description, so we can draw up a description of the inversion of each simple step.
 
-A word on cardinality. If the original query condition moves from a context to the instances of a particular role, the path ‘fans out’ over multiple instances. However, the inverse path will come from a single instance. In contrast, if the original query moves from a role instance to a context, the inverse query will fan out. This is not a problem, because queries have sequences of values as result. So queries are particular functions, with multiple results.
+A word on cardinality. If the original query moves from a context to the instances of a particular role, the path ‘fans out’ over multiple instances. However, the inverse path will come from a single instance. In contrast, if the original query moves from a role instance to a context, the inverse query will fan out. This is not a problem, because queries have sequences of values as result. So queries are particular functions, with multiple results.
 
 Besides simple composition of steps, we have (very few) functions that combine simple paths through the context-role network, filter being the most prominent example. In a filter operation, the results of one path are filtered by the outcome of the result of another path.
 
@@ -40,51 +40,59 @@ Besides simple composition of steps, we have (very few) functions that combine s
 
 === Where we store
 
-Queries are inverted in design time, as we process a model. As we follow an inverted query back to its origin through the web of types, _we store the remaining query with the node we’ve arrived at_, along the way.
+Queries are inverted in design time, as we process a model. As we follow an inverted query one step back to its origin through the web of types, _we store the remaining query with the node we’ve arrived at with that step_, along the way.
 
 We can pass through a role instance node in a number of ways:
 
 * From its context, using the role <type> step;
 * To its context, using the context step;
-* From its binding, using the binder <type> step;
-* From a role that binds it, using the binding step.
+* From its filler, using the filled role <type> step;
+* From a role that binds it, using the filler step.
 
-We only store inverted queries with Role types. We let the type of the first step of the inverted query determine the member of the type where we store it: so if the first step is binding, we’ll store the inverted query in onRoleDelta_binding.
-
-The step from a context to a role must be the odd man out (we don’t store inverted queries in context types). Here, we store the inverted query with the Role type _that the first step takes us to_ (the role <type> step takes us from a context instance to a role instance: we’ll store the inverted query in the onContextDelta_role of the type of that role instance).
+We store inverted queries with Role types, except for those that start with a `role <type>` step: these are stored with context types.. We let the type of the first step of the inverted query determine the member of the type where we store it: so if the first step is filler, we’ll store the inverted query in fillerInvertedQueries.
 
 The table below gives the overview for all four steps.
 
-[width="100%",cols="26%,37%,37%",options="header",]
+[width="100%",options="header",]
 |===
-|*step type of inverted query* |*query stored in* |*Query stored in node*
-|binder R |onRoleDelta_binder |of departure
-|binding |onRoleDelta_binding |of departure
-|context |onContextDelta_context |of departure
-|role R |onContextDelta_role |of arrival
+|*step type of inverted query* |*query stored in* |*of* |*Query applied to*
+|filled R |filledInvertedQueries |filled type|filled*
+|filler |fillerInvertedQueries |filled type|filler*
+|context |contextInvertedQueries |role type|role
+|role R |roleInvertedQueries |context type|role*
 |===
+
+NOTE: rows where the column 'Query applied to' is marked with an asterisk, have the first step of their inversion removed. Take the `role R` step as an example. The inverted query will be applied when a new instance of R is added (or removed). We just have to follow the rest of the inverted query from that new instance; nothing changes for the _other_ instances.
 
 Figure 1 illustrates all four cases.
 
-image:queryinversion/media/image1.jpg[A close up of text on a black background Description automatically generated,width=601,height=475]
+image:queryinversion/queryinversion1.jpg[A diagram showing a query and its inversion,width=800]
 
-Figure 1. Inverted queries in relation to various nodes in the graph. Green lines and text represent the original query; red lines and text represent the inverted query. The user has a perspective on role (type) r4. Blue lines connect a binder to its binding. The boxes show inverted queries as stored in various members of role types.
+Figure 1. Inverted queries in relation to various nodes in the graph. Green lines and text represent the original query; red lines and text represent the inverted query. The user has a perspective on role (type) r4. Blue lines start in a filler and end in a filled node. The boxes show inverted queries as stored in various members of role types.
 
+[#storing_inverted_queries]
 === What we store and what we apply it to
 
-Consider the example of the inverted query stored in on_contextDelta_role of r3 in Figure 1. The query step that we would apply to c3 would have been: role r3. So we would expect on_contextDelta_role to hold the full query
+Consider the example of the inverted query stored in roleInvertedQueries of c3 in Figure 1. The query step that we would apply to c3 would have been: role r3. So we would expect roleInvertedQueries to hold the full query
 
-Role r3 >> binding >> binder r1 >> context
+Role r3 >> filler >> filled role r1 >> context
 
-That will take us from c3 to c1, as intended. Yet, as the diagram shows, we skip the first query step (storing just binding >> binder r1 >> context) and apply it to r3 (instead of c3). Why?
+That will take us from c3 to c1, as intended. Yet, as the diagram shows, we skip the first query step (storing just filler >> filled role r1 >> context) and apply it to r3 (instead of c3). Why?
 
 We will apply the inverted query when we handle a ContextDelta. Let’s assume the delta represents a new instance of r3. Now the _whole point_ of applying the inverse query is to find contexts and roles that are now available to the user having the perspective, but were not so before. In other words: a new path has been formed and we want to travel that to its root. Obviously, the new connection must be part of the path we travel. But then we should start at the new instance of r3! Otherwise, on starting with c3, we _would also travel down all paths that begin with siblings of the new instance_.
 
 Hence we shorten the query and start at the new role instance.
 
-A similar consideration holds for the inverted query stored in onRoleDelta_binder stored in r2. Instead of applying the full inverted query to an instance of r2, we apply the shorter version to the new binder of type r1. This is because there can be many binders of r2!
+A similar consideration holds for the inverted query stored in filledInvertedQueries role stored in r1. Instead of applying the full inverted query to an instance of r2, we apply the shorter version to the new filled role of type r1. This is because there can be many filled roles of r2!
 
-This shortening-and-skipping does not hold for queries in onRoleDelta_binding and onContextDelta_context, because these steps are functional: there is always just one binding and just one context. No confusion can arise. So you see it is the cardinality of the step that determines how we handle it.
+For queries stored in fillerInvertedQueries, the same reasoning applies. 
+
+NOTE: Queries that start with the `filled` step are **not** stored with the type of departure.
+
+Looking back, we see that a query is stored with the node of departure of the first step: is it the `context` step, we store in the role; is it the `role` step, we store it in the context. The `filler` departs from the filled node and so we store such queries there. So why do we not store queries that start on the `filled` step with the filler node? There are two reasons:
+
+* the filler type might be from another model. That would require us to change that model, but that runs into problems (e.g. it might be authored by a different person!)
+* if the end user fills the filled node not with an instance of filler but with a _specialisation of filler_, the inverted query would be missed entirely.
 
 == Implementation complication: two types of trees
 
@@ -92,7 +100,7 @@ Module Perspectives.Query.Inversion holds the code that actually inverts a query
 
 [arabic]
 . a context may have many instances of a role type;
-. a role may be bound by many other roles.
+. a role may be fill many other roles.
 
 In other words, the path traced by executing a query stands out as a tree selected from the underlying graph of context- and role instances.
 
@@ -108,6 +116,84 @@ Confusingly, the _description_ _of a query_ _itself can have a tree-shape_. This
 
 Being a tree, its inverse is, again, a collection of paths. This time, however, these are paths through the underlying graph of types of contexts and roles.
 
+== Filtered queries
+A quick refresh: a query, like functions do, has an origin _domain_ and target _range_. In the expression `filter source with criterium` the `source` expression is a function that operates on the query domain and the resources that are computed with it lie in its range. The `criterium` expression must be a Boolean function and only those resources in the range that map to true with the criterium are in the end result of the filtered query.
+
+The `filter` allows some values or resources to pass while it retains others. If we think of a filter in a query as a step of its own, it is a function whose domain and range are, by definition, equal. This implies that filter and its inversion have the same type. Consequently, to invert a filter in a query, we don't actually change the filter operation itself: it serves just as well 'backwards' as 'forwards'.
+
+However, a filter is a query step with a query as parameter value. The query yields a Boolean result. It maps each value of the sequence that is passed to the filter to `true` (letting the value pass) or `false` (retaining it). As the objective of query inversion is to find out, for each mutation of the structure of contexts, roles and their properties, whom to send a delta describing that mutation, this also applies to the filter step query parameter. We deal with that by appending the filter parameter query with its source of elements to judge and then invert the result. As a consequence, when on the instance level something changes in the criterium, we can just apply the entire inverted query _at that point in the type chain_ to find the contexts that are instances of the domain of the query.
+
+Remember again that we 'kink' an inverted query at each step, producing from a single inverted query with n steps exactly n 'kinked' queries. In the paragraph <<storing_inverted_queries, on storing inverted queries>>, we have carefully analysed in what type we store each of these. How do we handle this new filter step? 
+
+If we encounter a kinked query whose backwards step is:
+
+[code]
+----
+	{first source step} << filter criterium << {last criterium step}
+----
+
+we store it twice. Once as 
+
+[code]
+----
+	{first source step} << {last criterium step}
+----
+
+and store it in the way described above, depending on the _last criterium step_, and once as 
+
+[code]
+----
+	{first source step} << filter criterium
+----
+
+and store that depending on the _first source step_. Now, as we have seen, in three of the four cases we actually omit the first step as we store the kinked query. What are the consequences for the second case, when we've tacked a filter step onto the backwards part? Let's take one example and analyse it.
+
+Suppose the first source step was `filled R`. Instead of applying that step to the filler, we remove it from the query we store and apply the result directly to the filled role instead. Remember that in runtime we have both the filler and filled role at hand (both are in the delta that describes a new `fills` relationship). But the filter step is constructed so as to apply to the _filler_ role, not to the _filled_ role we now are poised to apply it to. For that reason, before storing the inverted query, _we modify the criterium step by prepending the filler step to it_. 
+
+In this way, we keep the runtime algorithm intact. An alternative would be to determine, runtime, each time we apply a backwards query, whether it starts on a filter step and, if so apply it to the filler instead of the filled role. I have chosen for complexitiy in the compilation phase over complexity in the interpreter phase.
+
+Mutatis mutandis, the same reasoning applies to filtered backwards queries whose first source step is `filler` or `role R`.
+
+=== Why create two inverted queries out of one?
+But let's return to the fact that we store _two_ inverted queries while we only processed one. The reason for this has to do with the way we handle composition when we invert the original query. Both the left part and the right part of a composition may result in multiple kinked queries. We combine those results by treating it like a kind of array multiplication: we combine each part on the left with each part on the right (under the condition that the domain and range of both parts comply). We then add the inversions of the left part to the end result, _except when the right part starts on a filter_. Why? Because we want to tack the filter on the left part inversions (as shown above). So we leave out the left parts here and _recreate them when we store the inverted queries_, as shown above.
+
+Why not add the filter to the left parts during the composition inversion? Because it is complex and depends on the kind of first steps, as shown above. We actually had the machinery to do the case analysis in the algorithm that stores, so we re-used that.
+
+=== We are not yet done
+Alas, the analysis given above is not complete. Let's give an example, taken from a model to test the inversion of queries with filters:
+
+[code]
+----
+  case FilterTest
+
+    user ZietMinder filledBy sys:PerspectivesSystem$User
+      perspective on SommigeDingen
+        props (Naam) verbs (Consult)
+
+    thing AlleDingen (relational)
+      property Naam (String)
+      property Zichtbaar (Boolean)
+
+    thing SommigeDingen = filter AlleDingen with Zichtbaar
+----
+
+The user role `ZietMinder` is a peer of users in another role. The objective of the test is to make sure that `ZietMinder` receives all deltas to give him access to all instances of `SommigeDingen` that this model promises. Now consider the situation of an instance of `AlleDingen` with name 'Ding 1'. `ZietMinder` users will not see this instance, as long as its `Zichtbaar` property is not `true`. However, what happens under the regime described above, when `Zichtbaar` is made `true`, is that these users _will just receive the delta describing that property change_. But they also need the deltas that describe how to add the instance 'Ding 1' in the first place! Why does this not happen?
+
+This situation is reminiscent of what happens when one fills a role instance R1 with R2. Users with a perspective on a calculated role that has depends on this fills relationship, _should receive all deltas that describe R2_ (and everything that follows according to the query definition). We handle that in the PDR by executing the query interpreter on the _forwards_ part of the kinked query stored at the filled type (the type of R1). So we would execute the forwards part on R2, collect all assumptions (roles and contexts visited) and map them to deltas.
+
+Similar reasoning applies to this situation. This is the algorithm that has yet to be implemented. 
+
+First of all, we have to be able to tell whether the forwards or backwards part of a kinked query has a filter step, somewhere (we might add a property to the data structure that describes kinked queries: notice that would constitute a change to the DomeinFile structure requiring recompilation of all models). Then:
+
+* if the backwards part contains a filter:
+** apply the backwards query, using the query interpreter, to the applicable instance;
+** if there is a result (consisting of users and contexts), construct deltas from it and add them (and the original delta) to the current Transaction for all users (notice that, by definition, all results would satisfy the criterium applied somewhere in the backwards query).
+* if the forwards part contains a filter:
+** apply the forwards query, using the query interpreter, to the applicable instance. if there is a result R:
+** apply the backwards query 
+** for any users resulting from that, send all delta's based on R (and include the original delta)
+
+
 == Some cases
 
 === Variables
@@ -118,33 +204,33 @@ perspective on: SomeRole
 
 on entry
 
-bind object >> binding to AnotherRole
+bind object >> filler to AnotherRole
 
 If we invert the sub-expression between bind and to, we should get
 
-binder SomeRole >> context
+filled role SomeRole >> context
 
-in order to arrive at the context of this rule from the role (whatever it is) that is being bound by it. Explanation:
+in order to arrive at the context of this rule from the role (whatever it is) that is being fill it. Explanation:
 
 [arabic]
-. the binding step inverts to binder SomeRole. SomeRole, because that is the type of the object of the perspective (it is the type of the step object).
+. the filler step inverts to filled role SomeRole. SomeRole, because that is the type of the object of the perspective (it is the type of the step object).
 . the object step itself inverts to context, because _underlying the object variable_ is the expression SomeRole, evaluated in the current context. That is how we arrive at the value of object (the inverse of SomeRole is context).
 
 This gives us a recipe for the general case in which a variable is bound to an arbitrary expression. Substitute the inverted expression that defines the variable into the syntactical location occupied by the variable.
 
-So while we invert queries, we add bindings to the compile time environment. Because the same variable name can be re-used arbitrarily often, we push a compile time frame before each block.
+So while we invert queries, we add fillers to the compile time environment. Because the same variable name can be re-used arbitrarily often, we push a compile time frame before each block.
 
 [quote]
-In the perspectives language, we can use LetE and LetA. This translates to a QueryFunctionDescription with function name WithFrame. The query inversion code pushes a frame as it encounters this instruction. The variable bindings that follow, lead to additional bindings in this frame. Finally the expression (or statements) in the body of the LetE or LetA are inverted in this environment.
+In the perspectives language, we can use LetE and LetA. This translates to a QueryFunctionDescription with function name WithFrame. The query inversion code pushes a frame as it encounters this instruction. The variable fillers that follow, lead to additional fillers in this frame. Finally the expression (or statements) in the body of the LetE or LetA are inverted in this environment.
 
 ==== Can we look up the variables, in compile time?
 
-In compile time, we store with the name of a variable a description of a function that will compute its value (an instance of QueryFunctionDescription): a _compile time variable binding_. A variable has a limited _visibility_; we will call the area of Perspectives Language code where we can refer to the variable, its _scope_. There are two scopes we have to consider:
+In compile time, we store with the name of a variable a description of a function that will compute its value (an instance of QueryFunctionDescription): a _compile time variable filler_. A variable has a limited _visibility_; we will call the area of Perspectives Language code where we can refer to the variable, its _scope_. There are two scopes we have to consider:
 
 * the condition of a state. It is the scope of the object variable.
-* the letE or letA expression. Each binding (from left to right or top to bottom) introduces a new scope: for the rest of the expression (i.e. the rest of the bindings and the body).
+* the letE or letA expression. Each filler (from left to right or top to bottom) introduces a new scope: for the rest of the expression (i.e. the rest of the fillers and the body).
 
-Scopes may be nested. We keep, in the state of the compiler, a stack of Environments to reflect that recursive structure. An Environment is a collection of compile time variable bindings. We introduce, in our Purescript code, a new Environment with the function withFrame. The argument to withFrame is a computation with state in which we save variables and their (compile time) binding.
+Scopes may be nested. We keep, in the state of the compiler, a stack of Environments to reflect that recursive structure. An Environment is a collection of compile time variable fillers. We introduce, in our Purescript code, a new Environment with the function withFrame. The argument to withFrame is a computation with state in which we save variables and their (compile time) filler.
 
 This makes it as if we can read the Purescript code as a lexical Perspectives Language scope: the computation (Purescript) corresponds to a particular scope (PL).
 
@@ -205,39 +291,27 @@ And we’re done with that. The (+) function does not change anything: it does n
 
 We can join the result of two (role) queries:
 
-property: Channel = (binder Initiator union binder ConnectedPartner) >> context >> extern >> ChannelDatabaseName
+property: Channel = (filled role Initiator union filled role ConnectedPartner) >> context >> extern >> ChannelDatabaseName
 
-The sub-expression (binder Initiator union binder ConnectedPartner) has a Sum type.
+The sub-expression (filled role Initiator union filled role ConnectedPartner) has a Sum type.
 
 We invert queries of this type by treating them as two separate queries:
 
-binder Initiator >> context >> extern >> ChannelDatabaseName
+filled role Initiator >> context >> extern >> ChannelDatabaseName
 
-binder ConnectedPartner >> context >> extern >> ChannelDatabaseName
+filled role ConnectedPartner >> context >> extern >> ChannelDatabaseName
 
 Both can be simply inverted.
-
-=== Filter queries
-
-A filter combines a source and a criterium:
-
-context: UnloadedModel = filter ModelsInUse with not available (binding >> context)
-
-Again, we invert these queries by considering them to be two separate parts:
-
-ModelsInUse
-
-ModelsInUser >> not available (binding >> context)
 
 === Functions with arguments
 
 A function like available takes an expression as argument. On inverting, we just ignore the function. So we treat
 
-ModelsInUser >> not available (binding >> context)
+ModelsInUser >> not available (filler >> context)
 
 just like
 
-ModelsInUser >> binding >> context
+ModelsInUser >> filler >> context
 
 (both not and available are functions with a single argument). Functions with more than one argument just lead to multiple queries, as with the join and filter operators.
 

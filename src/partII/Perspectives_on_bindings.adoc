@@ -34,7 +34,7 @@ The first inverted query we store with the Property P in its onPropertyDelta mem
 
 In short, by storing the first inverted query in the onPropertyDelta member of P, we make sure that U is informed of any change to P (please note that the change to P might come from some other User in C, for example. We do not distribute changes that a user makes to himself!).
 
-We store the second inverted query (just context) in the onContextDelta_context member of R. Now, when an instance of R is added to an instance of C, by similar reasoning as for properties, instances of U are informed of that change.
+We store the second inverted query (just context) in the contextInvertedQueries member of R. Now, when an instance of R is added to an instance of C, by similar reasoning as for properties, instances of U are informed of that change.
 
 == Binding
 
@@ -62,7 +62,7 @@ This is what happens:
 
 * The first query will be stored in onPropertyDelta of P~b~. This will make sure that changes of that property are sent to U.
 * The second query will be stored in onRoleDelta_binder of B. A RoleBindingDelta on B will lead to its execution, finds us instances of C and then the instances of U that will receive the Delta.
-* Finally, as above, the last inverted query is stored with onContextDelta_context of R. ContextDeltas that change the instances of R will be distributed to U.
+* Finally, as above, the last inverted query is stored with contextInvertedQueries of R. ContextDeltas that change the instances of R will be distributed to U.
 
 So we see that all possible changes along the path from C to the binding property P~b~ are communicated to U.
 
@@ -81,7 +81,7 @@ When we declare the binding of a Role to be UNIVERSAL, we prohibit instances fro
 [quote]
 The syntax for this is: R filledBy: None. Intuitively one would expect None to mean EMPTY. However, a universal role must carry all possible properties, including the property without value. No instance can ever have a property that has no value – so it is not possible to bind to a role whose binding is required to be UNIVERSAL.
 
-Any properties in a View on that Role must be the Role’s own properties. We just have the inverted query context to consider. We’ll store it, as above, with onContextDelta_context of R.
+Any properties in a View on that Role must be the Role’s own properties. We just have the inverted query context to consider. We’ll store it, as above, with contextInvertedQueries of R.
 
 === EMPTY
 
@@ -140,7 +140,7 @@ So our first step lands us on the (the rung with) Role R with the inverted query
 . Does R carry a property that is in the set that is relevant to the perspective?
 . Does the binding of R carry such a property?
 
-If either is true, we store our inverted query in onContextDelta_context of R. Moreover, for any property P of R in the relevant set, we compose a query from Value2Role and context and store that in onPropertyDelta of P.
+If either is true, we store our inverted query in contextInvertedQueries of R. Moreover, for any property P of R in the relevant set, we compose a query from Value2Role and context and store that in onPropertyDelta of P.
 
 Having finished the work on this first step, we descend to the next level down. That is, we apply our function to the binding of R. Doing so, we extend the inverted query we carry by prepending a binder step to it:
 

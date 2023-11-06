@@ -12,3 +12,5 @@ include::when_the_model_ecosystem_is_broken.adoc[leveloffset=2]
 include::restoringresources.adoc[leveloffset=2]
 
 include::when_resources_cannot_be_stored.adoc[leveloffset=2]
+
+include::runtime_options.adoc[leveloffset=2]

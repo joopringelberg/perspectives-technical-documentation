@@ -1,0 +1,20 @@
+[desc="In which we describe a method to provide the PDR with values for options that influence its behaviour, for example `isFirstInstallation`."]
+[#runtime_options]
+= Runtime Options
+When we call the PDR method `createAccount` (through the proxy), we would like to be able to tell it whether it is the very first account for a particular person, or a subsequent installation (e.g. on a smartphone, after the original installation was done on a laptop). We have a method for doing so, using 'runtime options'.
+
+In fact, whenever we create a `PerspectivesState` object to pass along to `runPerspectivesWithState`, we have to provide a RuntimeOptions value. This data type is defined at the time of writing as
+
+[code]
+----
+type RuntimeOptions = 
+  -- Default: true. Should be false when someone installs MyContexts on a second device.
+  { isFirstInstallation :: Boolean
+  -- Default: null. Provide a value to test setup of an experimental new System version.
+  , useSystemVersion :: Nullable String
+  }
+----
+
+This record type can be extended at will.
+
+Notice that proxy functions providing a RuntimeOptions object should give a member the Javascript `null` value in order to omit a particular value. Currently, use `toMaybe` to convert a member like 'useSystemVersion' to a Nothing or Just value.

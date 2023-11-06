@@ -10,6 +10,8 @@ All this should be weighed against the possibility to have the manager of the Ra
 
 This also protects the end user from brute-forcing passwords.
 
+NOTE: DESIGN DECISION is to generate long passwords and keep them hidden from end users.
+
 === Plain text password information in fields
 Several user roles in `model://perspectives.domains#CouchdbManagement` have screens that show end-user's passwords in plain text. This is not recommended. A solution would be to introduce a Range type password (PPassword) and have the smartFieldControl generate inputs whose contents are by default not readable.
 
