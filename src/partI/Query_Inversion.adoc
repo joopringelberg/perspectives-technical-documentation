@@ -148,9 +148,14 @@ and store it in the way described above, depending on the _last criterium step_,
 
 and store that depending on the _first source step_. Now, as we have seen, in three of the four cases we actually omit the first step as we store the kinked query. What are the consequences for the second case, when we've tacked a filter step onto the backwards part? Let's take one example and analyse it.
 
-Suppose the first source step was `filled R`. Instead of applying that step to the filler, we remove it from the query we store and apply the result directly to the filled role instead. Remember that in runtime we have both the filler and filled role at hand (both are in the delta that describes a new `fills` relationship). But the filter step is constructed so as to apply to the _filler_ role, not to the _filled_ role we now are poised to apply it to. For that reason, before storing the inverted query, _we modify the criterium step by prepending the filler step to it_. 
+Suppose the first source step was `filled R`. Instead of applying that step to the filler, we remove it from the query we store and apply the result directly to the filled role. Remember that in runtime we have both the filler and filled role at hand (both are in the delta that describes a new `fills` relationship). But the criterium is constructed so as to apply to the _filler_ role, not to the _filled_ role we now are poised to apply it to. For that reason, before storing the inverted query, _we modify the criterium step by prepending the filler step to it_. The filler step is functional, so we do hardly introduce overhead.
 
-In this way, we keep the runtime algorithm intact. An alternative would be to determine, runtime, each time we apply a backwards query, whether it starts on a filter step and, if so apply it to the filler instead of the filled role. I have chosen for complexitiy in the compilation phase over complexity in the interpreter phase.
+image:queryinversion/optimalisationPlusFilter.jpg[A diagram showing the omission of the first backward step in combination with a filter step,width=800]
+
+Figure 2. The upper part of the picture shows the situation without optimalisation. The lower part shows how, after omitting the first backwards step, we have to add its inverse to the criterium to preserve semantics.
+
+
+In this way, we keep the runtime algorithm intact. An alternative would be to determine, runtime, each time we apply a backwards query, whether it starts on a filter step and, if so apply it to the filler instead of the filled role. This would introduce complexity in the runtime. But, more important, we would eliminate the efficiency step we introduced with removing the step from filler to filled. Remember that a role can fill many others, so we would have a 'fan out'.
 
 Mutatis mutandis, the same reasoning applies to filtered backwards queries whose first source step is `filler` or `role R`.
 
