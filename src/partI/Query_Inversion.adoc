@@ -201,6 +201,34 @@ First of all, we have to be able to tell whether the forwards or backwards part 
 
 == Some cases
 
+=== Context- and role individuals
+The query language permits _indexed context individuals_, such as `sys:MySystem`, and _indexed role individuals_, such as `sys:Me`. These should be understood as _constant functions_. Whatever their argument, they always return the same result. This even extends to the type of their argument. In this example:
+
+[code]
+----
+  user X = filter SomeUser with FirstName == sys:Me >> FirstName
+----
+
+the domain of `sys:Me` is role SomeUser, while in the next example (from `model://perspectives.domains#System`):
+
+[code]
+----
+domain model://perspectives.domains#System
+  state FirstInstallation = (callExternal util:SystemParameter( "IsFirstInstallation" ) returns Boolean) and (exists sys:TheWorld >> PerspectivesUsers)
+----
+
+the domain of sys:TheWorld is the context type `domain model://perspectives.domains#System` itself.
+
+How to invert such a query step? In other words, when, on trailing the query backwards, we have reached such an indexed individual, how should we proceed? Consider the second example where, if a new instance of `PerspectivesUsers` has been added, the first backwards step will take us to `sys:TheWorld`. What then, is the next step? The thing is, we don't know _which individual_ we should go to (the example is somewhat misleading because, obviously, there is only one instance of the type `domain model://perspectives.domains#System` in any installation. But that is beside the point: in the general case, there may be many instances of the type that the original forward step - a context individual constant function, in this case - has as domain).
+
+The only thing we have on offer is to retrieve **all** instances of that domain type. And this is what we do, employing the function `ExternalCoreContextGetter` with the context type. Similar, we use `ExternalCoreRoleGetter` in the case of a role domain.
+
+There is one more subtlety to discuss. 
+
+Inverted queries are 'kinked' at all junctions, to produce n kinked queries from an original of n steps. We store such kinked queries as a 'detection system' with the successive types that are visited by the query. However, storing the inversion of a context- or role individual runs into a problem and that is that just as the _domain_ of a constant function may be a context- or a role type, the _range_ of its inversion can be either of these, too. Now compare an 'ordinary' context step with the `ExternalCoreContextGetter` step. The first will, by construction, always have a role type domain and that is where we store the inverted query (in the member contextInvertedQueries of the EnumeratedRole representation). But the second might as well have a context type domain! So where do we store?
+
+Luckily, there is a nice way out. It so happens that, by definition, no instances of indexed individuals are ever constructed except on installation of a model. _So what is the use of setting up a creation detection system?_ We can simply ignore the kinked version of a query with an role or context individual step, whose backward path starts at that step. This does not mean that the inversion itself has no use. It may very well be a step somewhere inside the backwards part of another kinked variant. Just not as the first step.
+
 === Variables
 
 letE and letA expressions introduce variables. Furthermore, in calculated properties the variable object is automatically bound to the current object set and in calculated roles we have the variable currentcontext. How should we treat an expression using, for example, this object variable? Consider:
