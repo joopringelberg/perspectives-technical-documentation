@@ -348,6 +348,24 @@ ModelsInUser >> filler >> context
 
 (both not and available are functions with a single argument). Functions with more than one argument just lead to multiple queries, as with the join and filter operators.
 
+=== Sequence functions
+
+An expression like this (taken from CouchdbManagement): 
+
+[code]
+----
+extern >> binder Manifests >> context >> extern >>= first
+----
+
+is inverted as if it was
+
+[code]
+----
+extern >> binder Manifests >> context >> extern
+----
+
+That is, the sequence function at the end is just ignored.
+
 == What is inverted?
 Query inversion is all about _expressions_ in the Perspectives language. Queries occur in a limited number of lexical situations (that is, in an Perspectives Language source text):
 

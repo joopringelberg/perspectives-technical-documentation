@@ -74,3 +74,16 @@ client.heartbeat = \{incoming: 0, outgoing: 0};
 == User accounts
 
 The RabbitMQ manager must create user accounts; there is no self-registration.
+
+== Multiple RabbitMQ services
+In principle, a single RabbitMQ service provider could cater for the entire Perspectives Universe. However, that certainly is not in the spirit of distribution and would mean a big lock-in with a single provider. Instead, we would like it to be possible for many providers to provide the messaging infrastructure in a distributed way.
+
+It turns out that RabbitMQ has at least two technologies to be used to that purpose: federation and https://www.rabbitmq.com/shovel.html[shovel]. In this section I focus on shovel, as it seems the most apt to our situation. Shovel can be used to move messages from one server (or cluster) to another (note: this is different from load balancing in a cluster of RabbitMQ nodes). Let's assume there are two clusters, C1 and C2. What we want is that users of C1 can use their account to send messages to other users who have registered with C2. Were that not possible, a user would need an account with each cluster that caters for one of his peers. This would explode the number of RabbitMQ accounts that a single Perspectives user needs.
+
+In cluster C1, we need to set up a queue for cluster C2: let's call it C2queue_in_C1. We configure shovel such that any message sent to C2queue_in_C1 is forwarded to the amq.topic exchange in C2. Now lets delve into _addressing_ messages.
+
+The PDR publishes messages using the receivers Perspectives identification as topic (and that matches with a _binding key_ on the receiver's secret queue). However, both topics and binding keys may consist of a series of words, separated by dots. In a binding key, we can use wildcards. We'll give C2queue_in_C1 the binding key `C2.*`. Thus, any message whose topic starts with C2 will end up in C2queue_in_C1 and consequently will be forwarded to amq.topic of C2.
+
+We will configure a users' queue with a binding key that ignores the first (cluster identification) part: `*.<userId>`. As cluster C2 will not have a queue with a binding key that matches its own identification, only the intended receivers' binding key matches the topic of the message arriving from cluster C1 and so the message will end up in the queue of the receiver on C2.
+
+Notice that this approach requires a directed shovel link between any two clusters that have subscribers who are Perspectives peers. The number of links thus is quadratic, which does not seem to be prohibitive. 
