@@ -1,0 +1,37 @@
+[desc="A model to manage a RabbitMQ server, create subscriptions, queues and binding keys."]
+== BrokerServices
+
+(This chapter is a stub)
+
+=== Multiple installations
+A person might have MyContexts on her phone and on her laptop, or even on more devices. In this paragraph we describe a rather simple scheme by which such installations might be synchronized, even when they are not completely the same.
+
+A real world person running at least one MyContexts installation is identified in the Perspectives Universe with a single instance of the role PerspectivesUsers in the context TheWorld. This role instance fills the role Me in her own SocialEnvironment (and, by implication, not in the SocialEnvironment of other persons; in those, it fills instances of the role Persons). This SocialEnvironment$Me in turn fills the User role of all the PerspectivesSystem contexts that describe her devices running Mycontexts.
+
+How do peers connect? First of all, they do so by sending transactions to their RabbitMQ installation, using for topics the identifiers of the PerspectivesUsers roles of said peers. These topics are matched to binding keys on queues. 
+
+Now, for each installation that a user runs, her version of TheWorld and of her SocialEnvironment are equal, but the PerspectivesSystem instances are not. What we want to achieve is that there is an associated queue in RabbitMQ for each PerspectivesSystem. Moreover, we want any transaction sent to the topic ID where ID identifies a particular instance of TheWorld$PerspectivesUsers, is duplicated to each of those queues. In that way, each MyContexts instance for a person can read from its own key.
+
+So how do we arrange for this to happen? In the BrokerContract, we have a role Queues. It must be filled with (the external role of) a PerspectivesSystem. For each installation, we'll have a different instance of Queues. On that instance we'll register a String-valued Property with the name QueueName.
+
+Now, when an installation starts up, it looks up the QueueName to use, by computing the value of the calculated Property CurrentQueueName on the BrokerServices$External role:
+
+[code]
+----
+Property CurrentQueueName = sys:MySystem >> binder Queues >> QueueName
+----
+
+Notice that the external role of the BrokerServices instance in an installation can be found with `bs:MyBrokers >> external`.
+
+Notice, too, that the value of this computation will be different on each device that the person runs MyContexts on!
+
+Having found the name of the queue for this installation, the PDR then proceeds to compute the instance of TheWorld$PerspectivesUsers that represents the current user:
+
+[code]
+----
+  sys:MySocialEnvironmant$Me >> binding
+----
+
+This is the value of the binding key that should be mapped to the queue for this installation. Now, by subscribing with this combination of values (and of course while presenting the proper credentials for authentication), it will start listening to the queue reserved for this MyContexts instance. Notice that the queue with that name and its binding key rule are created when the PDR subscribes for the very first time.
+
+Peers don't have to deal with this complexity. They just send a transaction with a topic that equals the TheWorld$PerspectivesUsers identifier.

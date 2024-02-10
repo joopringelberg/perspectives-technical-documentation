@@ -76,3 +76,5 @@ include::partIII/varioustopics.adoc[]
 = PART IV. ESSENTIAL MODELS
 
 include::partIV/couchdbManagement.adoc[]
+
+include::partIV/brokerServices.adoc[]
