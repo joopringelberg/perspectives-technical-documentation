@@ -427,12 +427,12 @@ The modeller publishes a context using the following syntactical construct:
       property Url (String)
       property Name (String)
 
-    publish at extern >> Url for Visitor
+    public Visitor at extern >> Url = sys:Me
       perspective on extern
         props (Url, Name) verbs (Consult)
 ----
 
-The keywords `publish at` should be followed by an expression that yields a Url in runtime, as evaluated with respect to the current context.
+The keyword `at` should be followed by an expression that yields a Url in runtime, as evaluated with respect to the current context.
 
 NOTE: The result of this expression **must** end on a forward slash! The compiler cannot check this; only a runtime error will reveal that the forward slash is missing.
 
@@ -441,12 +441,7 @@ On processing the ARC file, the PDR creates two roles with the given perspective
 * a calculated Visitor role: user Visitor = sys:Me
 * an Enumerated role VisitorProxy, with a Calculated Property Url = extern >> Url
 
-Actually, for `publish at <loc> for <Name>`, it creates both <Name> and <Name>Proxy.
-
-Moreover, a context type with a `publish at` clause is marked as having a public facing perspective. 
-Whenever some user creates an instance of such a context type, his PDR creates an instance of the proxy role in it automatically. The instance has no filler, but it functions as a 'ghost' user that the PDR will create deltas for. 
-
-Either the initiator communicates that instance to other users, or each peer re-creating that context instance also re-creates the VisitorProxy instance.
+Actually, for `public <Name> at <loc>`, it creates both <Name> and <Name>Proxy.
 
 This does NOT mean that the user who created an instance of CouchdbServer, has specified that instances of this type are associated with the RemoteScheme, at the server located by Url. He may have stored his instance locally, in the default store, or any other place of his choosing. But it DOES mean that a _version of the CouchdbServer, as defined by the published perspective, is available at that location_.
 
@@ -514,19 +509,21 @@ The public: scheme is just like the remote: scheme, but for the scheme name itse
 The rule for deltas is then that all default:, local: and remote: schemed identifiers should be reduced to their guids, whereas the public: identifiers are not. 
 
 === Overlapping public perspectives
-In model://perspectives.domains#CouchdbManagement, both a Repository and a ModelManifest have a public role. In fact, the ModelManifest contextrole property `LocalModelName` falls in both public perspectives. Either perspective publishes to a different location. Where does the contextrole of ModelManifest end up?
+In model://perspectives.domains#CouchdbManagement, both a Repository and a ModelManifest have a public role. In fact, the `Repository$Manifests` role property `NameSpace` falls in both public perspectives. Either perspective publishes to a different location. Where does the contextrole of ModelManifest end up?
 
 Let's step back here and reflect for a moment on the meaning of public roles. A public role is one that can be taken on by any member of the public (this is not entirely true, as the model's author may require particular role instances to fill the public role - but the general thrust of the argument remains). As a consequence, the resources in the public perspective are available to the public - regardless of the exact url where they are published. 
 
-One approach to the problem posed above, therefore, is just to publish the contextrole of ModelManifest and its property `LocalModelName` to _both locations_. Consider for a moment however, what would happen if a visitor of Repository opens a ModelManifest instance. Doing so he assumes the ModelManifest$Visitor role, which gives him access to, a.o., the Versions role. But as Repository$Visitor does not have a perspective on that role, it is not represented at the particular url where Repository$Visitor has published. No Versions will turn up! In contrast, were the user to visit ModelManifest directly, he would find instances of Versions. Clearly this is not what we want.
+One approach to the problem posed above, therefore, is just to publish `Repository$Manifests` and its property `NameSpace` to _both locations_. Consider for a moment however, what would happen if a visitor of Repository opens a ModelManifest instance. Doing so he assumes the `ModelManifest$Visitor` role, which gives him access to, a.o., the Versions role. He should therefore see instances of Versions. But as `Repository$Visitor` does not have a perspective on that role, the representation of the ModelManifest that is stored at the particular url where `Repository$Visitor` has published, it contains no Versions. No Versions will turn up! In contrast, were the user to visit ModelManifest directly - and see the version that is stored at the url where the Visitor of ModelManifest stores its resources - he would find instances of Versions. Clearly this is not what we want.
 
-For that reason we have adopted another strategy. We define, for each context, an optional public url. It will be available if there is a public user role in that context. Now, for each role instance, if its context does have a public url, we will publish it there. If it has no public url of itself (and we are indeed publishing) we use the public url of the user we are actually publishing for.
+For that reason we have adopted another strategy. We define, **for each context instance**, an optional public url. It will be available if there is a public user role in that context. Now, for each role instance, if its context does have a public url, we will publish it there. If it has no public url of itself (and we are indeed publishing) we use the public url of the user we are actually publishing for.
 
 Let's consider some examples. 
 
-In case of the role ModelManifest$External (with property LocalModelName), we find that ModelManifest does have a public url - it is the url where its Visitor role publishes to. So, even if we're in the middle of publishing _for_ Repository$Visitor, we'll publish ModelManifest$External to the url of ModelManifest$Visitor rather than to Repository$Visitor's url.
+In case of the role `Repository$Manifests` (with property `NameSpace`), we find that the Repository instance does have a public url - it is the url where its Visitor role publishes to. So, even if we're in the middle of publishing _for_ `Modelmanifest$Visitor`, we'll publish `Repository$Manifests` to the url of `Repository$Visitor` rather than to `ModelManifest$Visitor` 's url.
 
 In case of, say, the System$User role, things are different. Both Repository$Visitor and ModelManifest$Visitor have a perspective on User - but System doesn't have a public role of its own. So, an instance of User ends up at both public locations. 
+
+IMPORTANT: The takeaway is that the public location of a context instance overrides the public location of the public user role we're publishing for, for that context's roles. The _public location of a context instance_ is defined as the location of its (first) public user role of its type.
 
 == The default repository
 
