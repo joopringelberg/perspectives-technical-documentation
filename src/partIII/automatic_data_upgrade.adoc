@@ -1,0 +1,16 @@
+[desc="A framework to apply specific procedures to data existing in an installation, to ensure data compatibility after a breaking change in a new PDR version."]
+[#automatic_data_upgrade]
+= Automatic Data Upgrades
+A 'data-upgrade' is a procedure that is carried out on stored data of an installation, in order to ensure that they can be handled by a new version of the PDR. A 'new version' is, of course, a relative thing. We therefore annotate each data upgrade function with the PDR version number that saw its introduction (it's so-called `UpgradeVersion`). We also store the currently installed version of the PDR in the data stores that it has access to. This is the `InstalledVersion`.
+
+NOTE: The `InstalledVersion` should not be confused with the `pdrVersion`, a string that is defined in Perspectives.Utilities, whose value comes straight from the package.json file in the PDR project. The latter is the version of the code and it will be higher than the `InstalledVersion` right when an end user runs a new version for the first time.
+
+On first installation, we store the value of `pdrVersion` in `InstalledVersion`. Later, whenever `pdrVersion` is higher than `InstalledVersion`, we update the latter with the former.
+
+However, we only do that **after** data upgrades have been run. This is done by executing the function `runDataUpgrades` in the function `runPDR`. It checks whether a version is running that is newer than the known `InstalledVersion` and then runs all individual `dataUpgrade` functions. These are functions that each will execute their main stuff only when
+
+`InstalledVersion` < `UpgradeVersion` < = `pdrVersion`
+
+where the `UpgradeVersion` is the version of the PDR that saw the changes for which the dataUpgrade function compensates. 
+
+Note that the module `Perspectives.DataUpgrade` is a historic accumulation of upgrade procedures. In principle, no upgrade procedures should ever be removed. When a user who has not been active for some time, runs MyContexts only to find that she is several versions behind, all data upgrades will be carried out in historical order.

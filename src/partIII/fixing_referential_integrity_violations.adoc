@@ -1,0 +1,23 @@
+[desc="References to resources that are no longer available, must be garbage collected."]
+[#fix_referential_integrity]
+= Fixing referential integrity violations
+
+The representation of a role contains a reference to its context representation, and vice versa (unless the role has been specified as `unlinked`). Similarly, a role refers to its filler, and vice versa. Integrity is the state where each reference identifies a resource that actually can be retrieved from the installation's stores (or from a public store). It is a dangerous violation when this is not the case, as the PDR code has been written on the assumption of integrity and has been written to preserve it. 
+
+Nevertheless, it does happen: integrity is sometimes violated. This may be caused by an abrubt system failure (such as power interruption), or breakdown of the internet connection. Also, during development, a test installation is corrupted because code is not yet bug-free. When it happens, an error is thrown.
+
+The module `Perspectives.ReferentialIntegrity` provides a mechanism to restore integrity. The error is caught and it starts with the identifier pointing to the non-existing resource.
+
+Let's pause a moment to reflect on _how_ to restore integrity. All we know, at the moment of breakdown, is that a pointer leads to nothing. In principle, we have two options: remove the pointer, or restore the resource. But we have no information on the _cause_ of the breakdown of referential integrity. It may be that something went wrong during _removal of the resource_; but equally likely is that something went wrong during its _construction_.
+
+Restoring a resource is, therefore, a perilous undertaking. For example, assuming it actually existed before, we do not know who created it. We might re-create it correctly, but if it had been shared between peers, we might find that our peers have a different history (in terms of Deltas) for it than we now have. This would violate another principle that we adhere to: traceability of information to its author (it would be a violation close to breaking non-repudiability).
+
+Consequently, we remove the dangling pointer itself.
+
+However, in the error situation all we have is that pointer! Well, we also know _some resource_ contains it. The module `Perspectives.ReferentialIntegrity` works with four Couchdb queries, each of which form a table of one of the four types of pointers between resources as mentioned above. By looking up the dangling pointer in the column 'referred to', we find the resources that contain them in the column 'refers to'. Cleaning up is that rather straightforward.
+
+Or is it? We want to return our perspectives on this part of the Universe to a coherent state - one that would have been reached had everything gone normal. This may not be possible. It very much depends on automatic actions during state transitions. To get as close as possible to a sound situation, we re-evaluate the state of all resources that have been modified in the process of cleaning up. 
+
+We do not synchronize any of the changes with peers, assuming that our problem is local. This means that it may be that our perspective on a part of the Universe shared with a peer, actually misses some resources. Is that a problem? Not in any technical sense. If the peer sends us a Transaction that pertains to such locally missing resources, the receiving installation won't break. It will ignore any Delta's referring to missing resources; and it actually may restore some of the missing resources, insofar the transaction describes them sufficiently.
+
+The latter leads to another opportunity (not realised): that an installation that receives a Delta that refers to a resource it does not recognize, may _ask the sender to describe it_. This would consititute a self-healing process facilitated by peers, an exciting feature. 
