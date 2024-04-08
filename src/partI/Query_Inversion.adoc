@@ -38,6 +38,8 @@ Besides simple composition of steps, we have (very few) functions that combine s
 
 == Where we store inverted queries and how we use them
 
+NOTE: The design described below applies to PDR version 0.24.1 and earlier. From then on, inverted queries are stored not with the model but in a separate database. See the paragraph <<iq_in_couchdb, on storing inverted queries in Couchdb>> for details. _The paragraph below has not been updated!!_
+
 === Where we store
 
 Queries are inverted in design time, as we process a model. As we follow an inverted query one step back to its origin through the web of types, _we store the remaining query with the node we’ve arrived at with that step_, along the way.

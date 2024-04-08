@@ -5,3 +5,5 @@ include::Perspectives_across_context_boundaries.adoc[leveloffset=1]
 
 include::Query_Inversion.adoc[leveloffset=2]
 
+include::inverted_Queries_in_couchdb.adoc[leveloffset=2]
+
