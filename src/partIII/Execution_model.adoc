@@ -266,3 +266,33 @@ Then consider the new state that arises when new things are first added and then
 
 [quote]
 Actually, it does not matter whether we first add and then remove the results, or the other way round. This is because the system is robust enough not to fail if we try to add a role instance to a context that does not exist. But it’s certainly more elegant and efficient to first add and then remove.
+
+=== Caveat: when a condition result depends on a resource to be removed
+Imagine a state condition that checks whether an instance of a functional role exists. Clearly, the outcome of that query would be affected by removing the instance! But in the above, we've written that resources are only actually removed when all other work has been done - including evaluating state conditions! So what would happen is that, given that a role instance exists, the state query would return `true` - but then the role instance would be removed, clearly invalidating the condition. But it would be too late to notice!
+
+We have a partial remedy against this problem. If we detect a state condition result that depends on a removed resource, we *re-evaluate that state again after all resources have been removed*. Such conditions will then be triggered. However, the consequence is that any actions or notifications that are in their lexical scope, will be performed in the state that results _after removal of resources_.
+
+It may be easy to see where that will lead to problems, as in this example:
+
+[code]
+----
+context C
+  state SomeRoleExists = exists SomeRole
+		on exit 
+			notify U
+				"The role {SomeRole >> Name} no longer exists."
+
+  thing SomeRole
+		property Name (String)
+	
+	user U
+		perspective on SomeRole
+			props (Name) verbs (Consult)
+----
+
+By the time we establish that, indeed, state `SomeRoleExists` no longer holds for an instance of context C, it is too late to read its Name. This doesn't cause an error but the notification is less informative than intended.
+
+It may not always be as obvious that a condition depends on removal. Keep the following in mind:
+
+* a state condition may be written in terms of a type that is _calculated_ and the calculation may depend on a resource that will be removed. As the resource type will not appear _as is_ in the state condition, such a condition may escape your notice;
+* the resources used in the predicate of a filtered role or property also affect the outcome and so such states are re-evaluated after resource removal, too.
