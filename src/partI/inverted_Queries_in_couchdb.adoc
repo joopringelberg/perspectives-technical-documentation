@@ -197,3 +197,12 @@ For a *SUM* type, the members are alternatives. In runtime, each of these may oc
 
 A *PRODUCT* type represents either the Aspects of a Role, or its filler. Fillers are of no issue here, so it's about Aspects. The algorithm for the basic case just collects all keys derived from Aspects - and so we will do the same with keys that derive from members of a PRODUCT type.
 
+== The shape of the keys
+Couchdb allows keys to be Javascript objects. As our keys are records on the Purescript level that let themselves be read as Javascript objects, it seems straightforward to use this representation as values for keys of Couchdb documents that represent Inverted queries. However, the key must be marshalled as a html query parameter to couchdb and this involves serialising and de-serialising. It then turns out that:
+
+* the order of the fields seems to matter;
+* some characters in our identifiers (particulartly the hash (#) sign) must be _escaped_ to be included in the query parameter value.
+
+This makes the use of the object representation of keys brittle. I have not been able to find out how Pouchdb serializes objects; neither is clear to me whether Couchdb first deserializes such a query parameter value and only then compares it to the javascript object keys, or whether it serialises the keys and then compares it to the query parameter value. And what about the keys that are generated on constructing a view? Are they in string form, maybe, in the B-trees that represent the views?
+
+All in all I've decided to derive a string value from the Purescript records that represent query keys and to include those values in the documents that we store in Couchdb. We bypass the entire issue sketched above and this works as expected.
