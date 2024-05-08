@@ -1,0 +1,41 @@
+[desc="Identifying a natural person and her Perspectives installations"]
+[#system_and_user_identification]
+= Identifying Natural Persons and Perspectives Installations
+
+Anyone can create multiple Perspectives installations. A common scenario is to have an installation on one's laptop and one's mobile phone. Another scenario is for a developer to have multiple test installations. This raises the question: how do we identify the various natural persons in the Perspectives Universe (the 'users') and their installations?
+
+This is modelled in `model://perspectives.domains#System`. The context `TheWorld` holds a user role type `PerspectivesUsers`. An instance of this should correspond one-to-one with a natural person. Hence, its identifier identifies a natural person.
+
+The same model also describes an installation with the context `PerspectivesSystem`. So there is a one-to-many relation between `PerspectivesUsers` and `PerspectivesSystem`.
+
+== Requirements
+We have several requirements:
+
+. It should be possible to restore an installation;
+. The cryptographic keys that are used by the same person across her various installations should, obviously, be the same;
+. the `PerspectivesUsers` identifier that represent the same natural person across various installations should be one and the same;
+. When we restore an installation on a device, it's PerspectivesSystem identifier should, if at all possible, be the same as it was in the previous incarnation of the installation.
+. For testing purposes it is very convenient if we can easily recognise the databases that are created for a particular installation (particularly in Couchdb, as IndexedDB is rather hard to work with through the browser user interface).
+. However, it should be possible to have Couchdb credentials that are completely independent of the Perspectives identifiers (particularly the Couchdb username and `PerspectivesUsers` identifier.)
+
+== Design
+The fourth requirement calls for unique identification of a particular device. However, this turns out to be something that browser developers actively try to prevent. This so-called _fingerprinting_ is considered to be a threat to privacy. So instead we will rely in Perspectives on a **sequence number** entered by the end user, to identify her various devices. We combine that with the PerspectivesUsers identifier to arrive at a unique installation identifier.
+
+NOTE: It is not yet possible to read that sequence number somewhere in the MyContexts user interface.
+
+On creating a first installation, we force the end user to download her cryptographic keys. Obviously we cannot make her put them somehwere safe but assuming she does, she can _upload_ them with later installations or when restoring the first installation.
+
+We also provide an action `ExportForAnotherInstallation` in the SocialEnvironment for the Me role to create a file that can subsequently be downloaded. It contains all personal identifiers to restore an installation (that is, together with the keypair file) or to set up on another device. Notice that the peers that are known at the time of executing the action will be included in that file.
+
+On creating a Couchdb based installation, the end user enters username and password of her (existing) Couchdb account. MyContexts will then use that username instead of a generated CUID to identify the PerspectivesUsers instance. As the system identifier is subsequently based on that username, it is quite easy to find the databases that hold that installation's data.
+
+NOTE: Currently it is not yet possible to indicate that MyContexts should generate a CUID for the PerspectivesUser even though Couchdb is used. However, this is only missing in the GUI; the entire system is ready to handle a separate username and PerspectivesUsers identifier.
+
+On the MyContexts side we keep, for an installation, two documents in IndexedDB:
+
+* the user document that is provided to the PDR on creating an installation. It is identified by the PerspectivesUsers identifier.
+* the runtime options document that is provided to the PDR on running. It, too, is identified by the PerspectivesUsers identifier.
+
+This design may seem flawed. Surely both belong more to an installation than to a natural person? However, we keep the username and password for a Couchdb installation in the user document. On logging in, we select the right document with the username entered through the GUI, so we identify it with the username (which is in a one to one relation to a PerspectivesUser identifier for a given installation). 
+
+This has a consequence, however, and that is that a browser _profile_ (Chrome supports profiles) supports **just a single Perspectives installation**. That is not much of a restriction, as it is easy enough to set up  https://support.google.com/chrome/answer/2364824?hl=en&co=GENIE.Platform=Desktop[multiple profiles in Chrome] and https://support.mozilla.org/en-US/kb/profile-manager-create-remove-switch-firefox-profiles?redirectslug=profile-manager-create-and-remove-firefox-profiles&redirectlocale=en-US[multiple profiles in FireFox].
