@@ -1,0 +1,22 @@
+[desc="Public resources necessitate a refinement of synchronization"]
+= Synchronization and Public Resources
+A public context or role has an exceptional position in the Perspectives Universe (PU) of contexts and roles. It is primarily the representation of a resource as 'seen' by a _public participant_ of the PU; that is, a participant that can be anyone (as long as they know where to find the public representations). Let's call them `public resources`. This is our conception of what a page on the public internet should be. Public resources just point to each other, with identifiers in the `pub:` scheme. This is totally in line with private resources (with identifiers in a private scheme such as `def:`) that only point to each other.
+
+However, a private role might be filled with a public one. This allows Perspectives Users to point each other to public resources. 
+
+As a consequence, an inverted query might end up in a public resource. What does that mean for synchronization?
+
+It depends. If the user who should be informed that a change has occurred, is an instance of a public role, we **should not send a transaction**. After all, there is no PDR somewhere that runs on behalf of a public user. He is not a real person; we might rather call him a _persona_.
+
+Notice that if it is the public resource itself that is changed, it will be updated in its public location by the user who authored the change (in fact, the author interprets the transaction on behalf of the persona).
+
+However, if the user who should be informed **is not an instance of a public role**, we should inform him of that change (and remember, the change need not be of the public resource itself). A typical case is that of BrokerServices, where anyone can sign up and create a new contract. Signing up is done from within the public representation of a BrokerService. But the new contract, as it involves the Administrator of the BrokerService, should be shared with that Administrator. It works out nicely: the Administrator is not a public role, but the Visitor of the BrokerService is not. So we send a transaction to the Administrator but not to the Visitor.
+
+Finally, notice that an inverted query that leads into public representations, will never end up in a private representation - no public role is ever filled by a private one.
+
+== Public State Change
+Can the inversion of a state query end up in a public role or context? Conceivably it might. Remember that a private role can be filled with a public one. But what would it mean that a public resource changes state because of a change in private resources? 
+First of all, we cannot record such a state change in the public resource unless it is its author who causes the change. 
+Nevertheless, it is totally possible to model a situation where a Visitor creates something that causes a public resource to change state. Maybe we want to trigger some action automatically that has been defined in the public resource; it would even be executed on behalf of the Visitor, if so modelled. Maybe we want to notify the Visitor from within the public resource. In the current implementation of the PDR (0.24.2), this would cause an error as soon as the Visitor's PDR tried to record the state change on the public resource.
+
+Currently, we have disabled this. 
