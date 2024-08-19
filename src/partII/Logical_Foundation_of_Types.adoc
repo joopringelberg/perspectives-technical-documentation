@@ -1,0 +1,141 @@
+[multipage-level=3]
+[desc="Perspectives types considered as propositional logic."]
+= Logical Foundation of Types
+
+Let's consider a role type to be represented by a propositional symbol. If a role R is defined with an aspect A, we represent that by an implication:
+
+[code]
+----
+R => A
+----
+
+In other words, R implies A. Similarly, when fillers of R are restricted to the type F:
+
+[code]
+----
+R => F
+----
+
+Now we can consider our model to be this propositional theory:
+
+[code]
+----
+R
+R => A
+R => F
+----
+
+Implicitly, all formulas form a large conjuct. Draw all conclusions and leave out the implications:
+
+[code]
+----
+R & A & F
+----
+
+And we consider this to be the conjunctive normal form (CNF) of our little theory. 
+
+What have we achieved? Little more than stating explicitly that any instance that is an R is also an A and an F. 
+
+Let's reconsider role filling. The language allows us to state that a role should be filled by something that is either F1 or F2:
+
+[code]
+----
+R => F1 || F2
+----
+
+Given R, this expands to:
+
+[code]
+----
+R &
+F1 || F2
+----
+
+and this is still CNF.
+
+Now we may have the following definitions for F1 and F2:
+
+[code]
+----
+F1 => X
+F2 => X
+----
+
+And then we can derive:
+
+[code]
+----
+R &
+(F1 & X) || (F2 & X)
+----
+
+Normalize that:
+
+[code]
+----
+R &
+X &
+F1 || F2
+----
+
+We have stated explicitly that when something is an R, it certainly is an X as well.
+
+One of the most important questions we want to ask of role types is whether one type is built from another. More formally: is R a specialisation of X? Looking at what we have done so far, we recognise that specialisation can be mapped to implication. This formula:
+
+[code]
+----
+R => X
+----
+
+tells us that when something is an R, it is an X, too. And we know this is because either X is an aspect of R, or it fills R. **We only use implication to represent aspect-ness or role-filling**. In both cases we deem R to be built from X and so will say that R specialises X. In other words: specialisation can be operationalised in terms of logical implication under the representation we have been building up.
+
+[code]
+----
+R specialises X 
+iff
+R => X
+----
+
+
+Now the Conjunctive Normal Form allows us to easily determine whether one formula implies another. This builds on these general rules of inference:
+
+[code]
+----
+a => a || b     DISJ rule
+a && b => a     CONJ rule
+----
+
+We can write an algorithm based on these rules that determines whether one conjunctive formula implies another.
+
+Let R and X be in CNF. R => X if every term in X is a term of R (CONJ rule). However, the conjunctive terms of a CNF formula are disjunctions (possibly of a single propositional symbol). When looking for a term of R that 'will take care of' a particular term of X, equality is certainly a sufficient but not a necessary condition. The DISJ rule says that if the term of X is, for example, (F1 || F2), and we have F1 as a term of R, we know that (F1 || F2) is true. 
+
+This adds up to:
+
+* under `R specialises X` we take to understand `R => X`
+* R => X iff
+* For every disjunction x in the conjunctive formula of X, 
+* there is a disjunction r in the conjunctive formula of R for which the DISJ rule holds, i.e. r => x
+
+And actually, the DISJ rule is really simple: 
+
+[code]
+----
+a => a || b     DISJ rule
+----
+
+It is just a test whether the collection of simple propositional terms of the left hand is a subset of those of the right hand (notice that this **is only true because** we have put our formulas in normalised form!). Let's work that into our algorithm:
+
+* under `R specialises X` we take to understand `R => X`
+* R => X iff
+* For every disjunction x in the conjunctive formula of X, 
+* there is a disjunction r in the conjunctive formula of R for which is it true that the terms of r are a subset of the terms of x.
+
+It is instructive to reflect for a moment on why the DISJ rule reduces to set comparison. A formula implies another if every model of the first is a model of the second, too. For a propositional theory, a set of elements is a model under some mapping from symbols to elements. If a model makes a theory true, that model augmented with another element makes the theory true, too. So iff we equate the propositional symbols with the elements of the model, the set of terms can be considered to be a model.
+
+To sum up, we have the following equivalences:
+
+|===
+|Purescript data constructor |Logical operator |set operator
+|PROD |&& |union
+|SUM |\|\| |intersection
+|===

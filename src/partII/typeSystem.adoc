@@ -3,6 +3,8 @@
 
 include::Semantics_of_the_Perspectives_Language.adoc[leveloffset=2]
 
+include::Logical_Foundation_of_Types.adoc[leveloffset=2]
+
 include::Abstract_Data_Type.adoc[leveloffset=2]
 
 include::Type_reflection.adoc[leveloffset=2]
