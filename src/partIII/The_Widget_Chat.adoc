@@ -1,0 +1,173 @@
+[desc="How we include Chat on a basic level in MyContexts"]
+[#range_chat]
+= The Chat Widget
+MyContexts is built for cooperation. People cooperate by communicating and in Perspectives, we put emphasis on exchanging _structured information_ as an important form of communication. However, people are known to talk. So we want to include 'chat' as a basic functionality in MyContexts. It is actually possible to create a Chat application in the Perspectives Language as it is at the time of writing (August 2024). However, that involves a role instance per utterance and that is resource-intensive. We want to ameliorate the current situation and this chapter outlines how.
+
+We notice that at a basic level, Chat involves two or more people adding lines of free text - an _Utterance_ - to a document. Collisions are possible but are no more serious than ordering utterances in such a way that renders the text comprehensible. Actually, a simple order (such as by name of author) will probably give a readable result. Essential is of course the ability to synchronise the utterances of contributers among themselves and this is what the PDR does. But the core thing - a list of strings - can be modelled in Perspectives quite easily with a relational String property.
+
+Thinking about Chat in the context of Perspectives, we arrive at the following requirements:
+
+* the natural situation for a chat is a context with User roles;
+* the modeller must be able to indicate the user roles that may participate in a particular chat;
+* a user role may be able to just read the conversation (follow it), but on top of that may be able to add to it (participate in it);
+* it should be possible to include media files (like images, sound files and video files) and have them shown in situ.
+
+On the user interface side, people have come to expect a quite particular layout with a number of functions:
+
+* a history
+* a text field to enter an utterance
+* a send button
+* the ability to delete an earlier utterance (effectively hiding its content but not its existence)
+* to insert media like images and audio files and be able to see and hear them immediately.
+
+This calls for a specialised viewer. The basic smart field control would just lump all texts together on screen.
+
+== A graphical user interface
+The GUI is based on this MIT-licensed React toolkit: https://github.com/chatscope/chat-ui-kit-react. It provides us with a set of React building blocks to create a beautiful chat interface.
+
+To populate this component, we need the following data:
+
+* a table of the first- and last name of the participants;
+* a list of utterances so we can build Message items. 
+
+A Message can be constructed from a so-called Model which has the following structure:
+
+[code]
+----
+{
+  message: string,
+  sentTime: string,
+  sender: string,
+  direction: 'incoming' | 'outgoing' | 0 | 1,
+  position: 'single' | 'first' | 'normal' | 'last' | 0 | 1 | 2 | 3,
+  type: 'html' | 'text' | 'image' | 'custom',
+  payload: string | object | allowedChildren([MessageCustomContent])
+}
+----
+
+== Modelling Chat
+Taking the data required for the component as a cue, we model chat in the following way.
+
+First of all, a chat will be based on a normal `thing` role. To support a chat, it must have a relational String property - let's call it Utterances, though the name is up to the modeller. The participants in the chat will be those user roles in the context that have a perspective on the role that allows them to add to Utterances. To be able to follow a chat, one needs a Consult perspective. The user having a perspective with a Create role verb can initiate the chat. For the time being, we restrict ourselves to functional roles.
+
+In order to be able to generate a user interface based on the chatscope library, we introduce a new language keyword to describe screens. Note that we already have `table`, `form` and `markdown`. We now add `chat`. Chat must be configured like this:
+
+[code]
+----
+  user Participant1
+    perspective on Chat
+      only (Create, Remove)
+      props (Utterances) verbs (AddPropertyValue)
+    screen
+      row
+        chat
+          utterances Utterances
+  user Participant2
+    perspective on Chat
+      props (Utterances) verbs (AddPropertyValue)
+    screen
+      row
+        chat
+          utterances Utterances
+  user Reader
+    perspective on Chat
+      props (Utterances) verbs (Consult)
+    screen
+      row
+        chat Chat
+          utterances Utterances
+  thing Chat
+    property Utterances (relational, String)
+----
+
+The new parts here are the keyword `chat` and `utterances`. These are used to indicate the role type that the chat will be based on, and map a particular property of that role to the utterances that will make up the actual conversation.
+
+In fact, in the near future we will add another keyword: `media`. It must be followed by a property of type PFile. If the end user includes, say, an image in the chat, the file holding that image will be stored on the property of type PFile. Use of this keyword is optional.
+
+NOTE: we must extend properties with range PFile to relational properties, for this to work. This must involve some naming scheme for image files (currently we use the name of the property to store the actual file as an attachment to the role instance. This will fail for relational properties!).
+
+When a screen is constructed to be sent to the client, chat is rather sparsely represented. It just holds the role instance, and two property type identifiers (one for the Utterances, one for the media - if any).
+
+== The client side
+The screen interpreter will map the chat screen element to a new React component. This component will use the chatscope library. To populate it with data, it will call upon the PDR. Notice that by doing so we depart from the execution model of screens. Instead of populating the entire screen server side and regenerating it with every change to underlying data, the client will actively retrieve two data sets from the PDR:
+
+* the utterances, by requesting the value of the utterances property. This will be a 'live query': as soon as an utterance is added (by the user himself or by one of the other participants) a new value arrives at the component in the client and the chat history will be redrawn by React.
+* the participants. 
+
+Now for the participants we require a new API function:
+
+[code]
+----
+getChatParticipants :: RoleInstance -> MonadPerspectives (Array SerialisedParticipant)
+
+type SerialisedParticipant = String
+type Participant = { participant :: RoleInstance, firstName :: String, lastName :: String}
+----
+
+The API function roughly works like this:
+
+* it retrieves the type of the role instance;
+* it then finds all users that have a perspective on that role type in the current context;
+* next, it retrieves all instances of those user roles;
+* and combines them with the First- and Last name of the persons they represent into a Participant value.
+* Finally, it returns an array of the serialised (JSON.stringify) Participant values.
+
+The Chat component, when it receives this array, will parse all values and keep them for future reference.
+
+== On Utterances
+For the PDR, an Utterance is just a String. Clients create these strings and only clients interpret them. So what makes up an Utterance? We will simply create a simplified instance of the Model that is used by chatscope:
+
+[code]
+----
+{
+  sentTime: string,
+  sender: string,
+  direction: 'incoming' | 'outgoing',
+  position: 'single' | 'first' | 'normal' | 'last' ,
+  payload: string
+}
+----
+
+'type' will always be 'string', so we don't repeat that with each stored Utterance. In fact, we may - for purposes of saving space - resort to the numerical aliases for the members direction and position.
+
+Obviously, before adding an utterance to the chat, we apply JSON.stringify to it. We then use the API function addProperty to store it with the role instance.
+
+NOTE: we have to create addProperty!
+
+== On Images and other media files
+First of all, notice that the Message.Model accommodates images natively:
+
+[code]
+----
+ <Message type="image" model={{
+    direction: "incoming",
+    payload: {
+      src: joeIco,
+      alt: "Joe avatar",
+      width: "100px"
+    }
+  }}/>
+----
+
+Apart from specifying an image as payload, we can also include it as a child element with `Message.ImageContent`.
+
+There is also `Message.CustomContent`. It looks as if arbitrary HTML can be included in this tag, which would make it possible to include audio files.
+
+However, we must also be able to serialise such content. By setting Model.type to "html" we can make payload be the serialisation of html that renders a control to play audio. A simple example (taken from https://www.w3schools.com/html/html5_audio.asp):
+
+[code]
+----
+<audio controls>
+  <source src="horse.ogg" type="audio/ogg">
+  <source src="horse.mp3" type="audio/mpeg">
+Your browser does not support the audio element.
+</audio>
+----
+
+The value of `src` must be an URL to the media file. This URL derives from storing the media file as a property of the role instance that the chat is based on.
+
+To sum up: if the end user includes a media file in the chat, the control
+
+* saves it as a file in the designated property to store media files (the actual file will be stored as an attachment to the role);
+* either (based on the mime type of the media) generates html to play audio, serialises it and makes it the value of `payload`,
+* or constructs an object with the `src`, `alt` and `width` attributes like above, serialises it and makes it the value of 'payload'.

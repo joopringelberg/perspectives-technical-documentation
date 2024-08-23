@@ -20,3 +20,5 @@ include::automatic_data_upgrade.adoc[leveloffset=2]
 include::fixing_referential_integrity_violations.adoc[leveloffset=2]
 
 include::system_and_user_identification.adoc[leveloffset=2]
+
+include::The_Widget_Chat.adoc[leveloffset=2]
