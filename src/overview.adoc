@@ -78,3 +78,17 @@ include::partIII/varioustopics.adoc[]
 include::partIV/couchdbManagement.adoc[]
 
 include::partIV/brokerServices.adoc[]
+
+= PART V. MODELLING PATTERNS
+
+include::partV/Limitations_to_queries_on_aspect_roles.adoc[]
+
+include::partV/notifications.adoc[]
+
+include::partV/the_body_with_account_pattern.adoc[]
+
+include::partV/context_with_a_presence.adoc[]
+
+include::partV/guest_pattern.adoc[]
+
+include::partV/add_incoming_contexts_to_indexed_context.adoc[]

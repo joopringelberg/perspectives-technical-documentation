@@ -1,0 +1,46 @@
+[desc="A pattern for membership."]
+== The Body-with-Account Pattern
+
+The concept of membership, or account, occurs frequently in real world situations. It involves a body (like an organisation, but it may also be more like a service, such as a particular course given by an educational institution) and people that are its members, or, in other words, haven an account with it. 
+
+This text describes this pattern in terms of context- and role types that can be used as Aspects in models that apply to concrete situations. This pattern can be thought of as an elaboration of the Guest Pattern.
+
+=== Features of the pattern
+The account should be private, while the Body should be publicly accessible, in order for anyone to be able to apply. An Account obviously needs a perspective on itself, including the possibility to retract from the Body (to end the contract, so, in effect, to no longer have an account).
+
+An application may be in one of three states: waiting for approval, accepted and rejected. 
+
+=== The notion of Contract
+One way to implement this pattern is to have the Visitor create a new, private Context that has himself filling the role of Contractant and a representative of the Body as Contracter.
+
+The Body itself could have a calculated role that drags the Contractant into it. These roles then would have perspectives on the features of the Body hidden to non-members.
+
+What variable information goes into a contract?
+
+•	the parties
+•	begin- and possibly end date
+•	a fee, maybe
+
+Further, the Contractant could have credentials to access resources provided by the Body.
+We could put all this information on the Account role itself in the form of properties:
+
+•	begin- and end date
+•	fee
+•	credentials.
+
+So we do not really need a contract.
+
+=== Implementing the pattern
+In order to represent the various information, we either need an embedded context or an enumerated role. Since we have rejected the notion of contract, we will use an enumerated role. However, the context being public, it must be an unlinked role (otherwise visitors would receive a representation of the context with all account roles, disclosing, at least, the number of accounts).
+
+To protect the privacy of Accounts, its perspective on itself needs to be selfOnly.
+
+In order to be able to see the context at all before an end user has established an Account, we need a Calculated role. This role must have a perspective that allows it to create an Account, that is, to initiate the process that leads to either a full account or its rejection. This we achieve with a Guest role that computes sys:Me.
+
+Depending on the preference for enumerated roles over calculated roles, as soon as the Guest has created an instance of Accounts that is (ultimately) filled with himself, the Accounts type will turn up as the type of the role played by sys:Me in the Body context.
+
+We then have three states on Accounts:
+
+•	Waiting
+•	Rejected
+•	Accepted

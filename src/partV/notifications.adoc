@@ -1,0 +1,31 @@
+[desc="An aspect pattern to add notifications to a model"]
+== Notifications
+
+The notification mechanism is partly built into the Perspectives Distributed Runtime, partly modelled in model:System. 
+
+[code]
+----
+  case ContextWithNotification
+    thing Notifications (relational)
+      property Message (String)
+    user NotifiedUser
+      perspective on Notifications
+        action DeleteNotifications
+          delete role Notifications
+----
+
+Add ContextWithNotification as an Aspect to a context that you model to receive notifications. It adds the role Notifications and the InPlace graphical user interface has a place to show them.
+
+Actually, this place is visible only when you visit the context itself. Nevertheless, when a notification is generated, it will appear as a notification on screen, using the operating system notification mechanism. 
+
+=== Notification in the system context
+Notifying by adding a role to a context is somewhat of an antipattern when you want to notify the user on exit of a context. Consider what happens: your on exit action is run, it adds a Notifications role instance to the context – which is then instantly removed with all of its roles!
+
+The graphical client, however, relies on displaying the Notifications instances in a context. Clearly, this should not work and it does not. To clarify the mechanism further, it is not even shown transiently using the operating system notification system; this, too, is only triggered when a new Notifications role instance is detected.
+
+In such cases you can resort to 
+
+•	either notify in the embedding context, where the contextrole pointing to the context is removed (create an on exit there);
+•	or notify in the system context.
+
+The former requires you to add the ContextWithNotification Aspect to your embedding context. To achieve the latter, you don’t use Aspects at all. The system context is the default where Notifications are stored when they are no

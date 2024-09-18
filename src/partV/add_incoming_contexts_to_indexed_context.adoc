@@ -1,0 +1,95 @@
+[desc="Usually a model root context - the 'App' - contains a list of embedded contexts. Here we describe how to make such a context appear in one's app when it has been constructed by a peer."]
+== Add incoming contexts to an indexed context
+A common way to structure functionality is to add an indexed root context to the model. This functions as an entry point for the functionality. It is important to realise that even though each user can reach that root context through the same name, all these contexts are actually different from each other. That is the meaning of 'indexed'.
+
+Now let's assume that the embedded contexts are shared by several peers. As an example, consider this very simple situation:
+
+[code]
+----
+
+domain model://joopringelberg.nl#PsychoTherapy
+  use ps for domain model://joopringelberg.nl#PsychoTherapy
+
+  case PsychoTherapy
+    indexed ps:PsychoTherapyApp
+    aspect sys:RootContext
+
+    user Manager filledBy sys:TheWorld$PerspectivesUsers
+      perspective on ClientCases
+        all roleverbs
+        props (Name) verbs (Consult)
+
+    context ClientCases (relational) filledBy ClientCase
+
+  case ClientCase
+
+    user Client (relational) filledBy sys:TheWorld$PerspectivesUsers
+
+    user Psychiatrist (functional) = extern >> binder ClientCases >> context >> Manager
+      perspective on Client
+        all roleverbs
+        props (FirstName, Report) verbs (SetPropertyValue)
+----
+
+We've omitted several details, but the essence is there: the PsychotherapyApp holds a number of ClientCases and each such case has a Client and a Psychiatrist role. Now it is important to realise that both clients and psychiatrists use the same app and hence have the same (type of) entrypoint, to wit the PsychotherapyApp. Obviously, each will have its own instance! We expect the app of a working psychiatrist to have a large number of clientcases, and a client to have just one case - his own. Or at most a few, where he figures in the Client role of each of them.
+
+We'll furthermore assume that it is the psychiatrist who creates the ClientCases.
+
+Perspectives (the PDR) handles synchronisation, so at first sight it seems all is well. The psychiatrist (in his role of Manager) creates a case, opens it (we've omitted how he gets a role in the case) and adds a Client role and fills it with a contact from his list (again, we just assume that contact is there). But even while the client will actually receive the case, he will not see it in his PsychotherapyApp. But wait! We haven't actually given the Client a perspective on the ClientCases role. 
+
+That is easily fixed:
+
+[code]
+----
+    user Client (relational) filledBy sys:TheWorld$PerspectivesUsers
+      perspective on extern >> binder ClientCases
+----
+
+But again the client won't see his case in his app - even though, this time, he will receive a ClientCases role instance filled with his own case. How come?
+
+The key to understanding this is that the ClientCases role instance received by the client **is actually a role in the PsychoTherapyApp of the psychiatrist**! And that is **not** his own instance of the PsychoTherapyApp! The ClientCases role instance is useless to the client. It can never be added to his own app, too (a role has exactly one context). 
+
+Instead, we need to create an instance of ClientCases locally. Here is how:
+
+[code]
+----
+  case ClientCase
+    external
+      property Name = context >> Client >> FirstName
+
+      state AddIncoming = (not exists filter ps:PsychoTherapyApp >> ClientCases with filledBy origin) and exists (filter context >> Client with filledBy sys:SocialMe >> binding)
+        perspective of Client
+          perspective on extern >> binder ClientCases
+            selfonly
+            only (Create, Fill)
+        on entry
+          do for Client
+            bind origin to ClientCases in ps:PsychoTherapyApp
+----
+
+Explanation. When an incoming ClientCase is (re)constructed from information sent by the psychiatrist, it enters state AddIncoming. In this state, the Client has an extra perspective, on ClientCases in the app. We use that perspective to create, on behalf of the Client, a new instance of ClientCases and fill it with the incoming case. Exactly what we need!
+
+The condition of state AddIncoming is quite involved. Step by step:
+
+* Starting _from his own_ PsychotherapyApp, we look for ClientCases that are filled by the incoming ClientCase (using the keyword `origin`). If that does not exist, we're going to add it. 
+* However, the state condition contains a second part. It checks whether the Client in the incoming case is actually filled by the receiving peer. 
+
+Why do we need that check? Because the incoming ClientCase is reconstructed part by part and we cannot be sure that the Client role is actually filled when we evaluate the ClientCase$External state. In fact, that is likely not to be the case. And then the PDR tries to execute an automatic action (`on entry`) for a non-existing user role instance and just ignores it. The second part of the condition ensures that we have someone to perform the act!
+
+=== Not an Aspect pattern
+Unfortunately we cannot yet turn this pattern into reusable aspect role and contexts. This is because it crucially depends on the indexed name of the App context. In the future, we may strengthen type level queries up to the point we can actually make the aspect approach work. It would require the following steps:
+
+* from the external role of the incoming case, move to the type level by getting its type (ClientCase$External);
+* on the type level, move to the role type that is filled by it (ClientCases);
+* on the type level, move to its context type (PsychoTherapy);
+* get its indexed name (ps:PsychoTherapyApp);
+* finally, from that identifier, get the (local) instance of PsychoTherapyApp
+
+All this comes in place of the step `ps:PsychoTherapyApp`. We might make it a little more readable by including the indexed app as a calculated context in ClientCase:
+
+[code]
+----
+    context TheApp = contextType >> extern >> binder TheContextRole >> context >> indexedName >> contextinstance
+----
+
+(notice that because this query starts at the context instance rather than the external role, we have to include that step). In this example, the query steps `extern`, `binder` and `context` are overloaded for the type level. `contextType` already exists. `indexedName` does exist, but should be overloaded for the type level. 

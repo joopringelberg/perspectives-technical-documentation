@@ -1,0 +1,19 @@
+[desc="A pitfall with respect to aspect roles in queries."]
+== Limitations to queries on aspect roles
+
+When we add a Context as an Aspect to another Context, all its role types are added to the enriched context. Quite often we specialise existing role types with Aspect roles. However, for role types added as is to a context, a restriction holds with respect to queries. A query of the form 
+
+[code]
+----
+binder AspectRole >> context >> some-other-step
+----
+
+will make the query compiler think that it ends with the static context type of the AspectRole – not the context to which the Aspect was added, its embedding context. This means that the analysis of some-other-step starts on the wrong foot. When it is a role step, the compiler may say that role is not available. When moving to the external role and then to a binder, the compiler may unexpectedly say that this binder is not available.
+
+This issue may be fixed in the future but will require the embedding context type to be specified, e.g. like this:
+
+[code]
+----
+binder AspectRole of SomeContext >> context
+----
+Even if the query compiler does not complain, synchronization may be compromised because InvertedQueries will be stored on the AspectRole and when it is re-used in various contexts, instances of all these types will be evaluated during synchronization.
