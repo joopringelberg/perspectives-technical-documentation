@@ -47,6 +47,14 @@ PART IV discusses a number of models that are essential to the functioning of My
 * model://perspectives.domains#System
 * model://perspectives.domains#CouchdbManagement
 
+PART V is a collection of modelling practices, often worked out as a related set of role- and context aspects Some examples: 
+
+* the Guest-pattern, allowing any user to take part in a context; 
+* the modelling of Notifications;
+* a pattern to insert a context initiated by a peer into a top level context.
+
+PART VI is on the design of MyContexts, the end user program that adds a user interface to the PDR.
+
 === Other resources
 There are quite a few other resources on the Perspectives project.
 

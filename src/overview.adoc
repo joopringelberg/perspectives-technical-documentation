@@ -92,3 +92,7 @@ include::partV/context_with_a_presence.adoc[]
 include::partV/guest_pattern.adoc[]
 
 include::partV/add_incoming_contexts_to_indexed_context.adoc[]
+
+= PART VI. DESIGN OF MYCONTEXTS
+
+include::partVI/mobile_design.adoc[]

@@ -1,0 +1,115 @@
+[desc="The design of the mobile application"]
+== Mobile Graphical User Interface
+On designing the MyContexts application for mobile, we take a cue from WhatsApp in a most general way. Users familiar with that application should be able to relate familiar concepts to new ones, like a _chat_,  _groups_ (contexts) and lists of people. This text gives a running account of the mobile design. For a concise list of points, see <<Everything put together>>.
+
+=== A first impression
+The application's user interface is, unsurprisingly, built around the notion of a context. It's roles are displayed in a single view except for its user roles (a view being a presentation that encompasses the entire screen). Let's call the former the _main view_ and the latter the _users view_. Regardless of the view, a bar at the bottom will be visible sporting five buttons. One of these will take the user to the users view. A small button in the _top left_ corner of that view allows the user to return back to the main view. This is not so much navigating, as switching views of the same thing (that is, context).
+
+In the center of the bar is a button that will bring up a panel from the bottom that partly covers the screen. It lists any number of roles that have been put there before by a _copy action_. In other words, this panel is what we ususally think of as the _clipboard_. More on copy-and-paste later.
+
+The two buttons on the left are for navigating to two particularly important contexts:
+
+* the first carries the notion of recent activity. It shows two rolled-up panes:
+** contexts that have been recently visited (put on screen), and
+** _notifications_ that alert the user to actions of his peers.
+* The second provides a more stable structure that allows for navigation, not unlike the table of contents of a book. Components are
+** _Pinned_ starting points (more about this later)
+** Apps (indexed root contexts, in technical parlance)
+** App stores.
+
+Immediately left of the clipboard button is the users button discussed above. Finally, on the far right, is a back-button. This is meant for navigation: it brings back the previous context in the two views.
+
+The GUI is completed by a hamburger menu on the top left. 
+
+This is, in broad outlines, the entire application. Now lets dive into details and see how things work out.
+
+=== Presentation of a context
+MyContexts is all about co-operation. This stands out because the main view presents, right at the top, the chat(s) that runs around the situation. In technical terms, a chat is just a thing role with appropriate text properties; in terms of the user interface, it is a prominent component with familiar shapes and functions like a history and a field to enter a message.
+
+Below that chat we find rolled-up panels, one for each thing- and context role. A panel can be expanded into a list of role instances. Each instance will have a descriptive title under end user control. The panel title itself will identify the role (role names are not displayed as such, however: we use a system of translation that allows for user-friendly titles. Panel titles are thus controlled by the model).
+
+==== Thing roles
+Tapping a thing role instance will slide in a form from the right. The form will cover the entire view. A small backwards arrow in the top left corner will slide the form back to the right and reveal the underlying form. The form is a _view_ in its own right: tapping a role instance or tapping the upper-left backwards arrow are forms of view-switching.
+
+Roles can have a single- or multiple instances. A single-instance role will be represented by just a panel heading. Tap the panel heading to slide in the form view for that single instance.
+
+The form view is familiar: thousands of apps sport the same type of vertical list of labels and (editable or non-editable) fields. To leave an edited field is to commit its value.
+
+==== Context roles
+Tapping a context role instance causes context navigation: the context views (main- and user) will be filled with role instances from the selected context. A context role will be immediately recognizable by a small icon to the right of the context name.
+
+To move back to the previous context, the user taps the back button in the bar at the bottom. 
+
+Contexts that have been visited are put into the recently visited contexts list.
+
+==== A special widget: markdown viewer
+In order to be able to present a context as a formatted page of text, the app displays a role with appropriate properties not as a panel, but as formatted text. This may be in between panels that represent other roles, or it may fill the entire main view. This text may have links that, upon tapping, navigate to another context.
+
+=== Accessing more functionality on role instances
+In the above we have seen how to edit a thing role's properties or how to navigate to a context. But we have more things to do with role instances, such as putting it on the clipboard. 
+
+==== The clipboard
+As copying a role is a very common action, we make it available by tap-hold.
+
+Once on the clipboard, the user can remove it by sliding it from right to left. This will reveal a (red) remove button. Notice that this removes the role from the clipboard; not from its context! The user selects a role on the clipboard by tapping it. Tapping outside a role will deselect the currently selected role. The selected role can be _pasted_ into another existing role instance in order to fill it. It can, in some circumstances, also be used to create and fill a new role instance.
+
+==== Removing a role, filling it, etc.
+In order to execute actions like removing a role or filling it, the end user has to open a menu on the applicable role instance by swiping from right to left over it. This will slide in from the right a context menu showing two or three buttons. The rightmost of these will show an ellipsis icon (three dots). Tapping that will bring up the full context menu from the bottom.
+
+Items on the role context menu depend partly on the kind of role. The full list of actions is:
+
+* Remove the role
+* Remove the role and the context that fills it (just for contextroles)
+* Remove the filler of the role
+* Fill the role with the selected role on the clipboard
+* Open the context of the filler (also possible with double-tap)
+* Open the form to edit the contextrole properties (just for contextroles).
+
+==== Adding a role or context instance
+If the users perspective on a role allows it, the panel header displays a small icon on the right side (e.g. a plus sign). Tapping that icon will create a new role instance. In case of a context role, there may be multiple types of contexts that can be created. The end user chooses one of them on a panel that will slide in from the bottom.
+
+=== The user view
+Just like the main view, the user view displays the various user roles as panels that can be tapped to reveal a list of (user) roles. However, in order to quickly find a user by name, there is an alternative display that shows a single list of user role instances, ordered alphabetically (on first name or last name).
+
+Secondly: there is a single action one wants to perform quite often on a user role, and that is to open a _chat_ with that user. The user item will have a small button to open a chat. As soon as we support it, we will add butons for audio and video connections.
+
+NOTE: these buttons may be too small to handle comfortably. In that case, we can add the actions to the context menu that can be swiped in from the right. 
+
+=== Hamburger menu
+For each context, actions may be defined (not to be confused with actions on role instances). We put these actions in the hamburger menu, below a line separating it from standard actions (currently we have none).
+
+=== Everything put together
+In short, this is the mobile GUI:
+
+* Three views:
+** main (chat, thing- and contextroles)
+** user
+*** switch between panelled display and alphabetically ordered display
+*** buttons to start or continue a chat, a speech or video call.
+** Role (a form displaying the role's properties, some of them editable)
+** switch back to the previous view by tapping a small left-arrow on the top left (only on user- and form view).
+* five buttons:
+** Recent: navigates to a context displaying:
+*** Recently visited contexts
+*** Notifications
+** Apps: navigates to a context displaying:
+*** Pinned contexts
+*** Installed Apps
+*** App stores
+** Clipboard: a list of copied role instances
+*** an instance may be selected by tapping
+*** tapping outside an item deselects the current item
+** People:
+*** switch between paneled display and a single ordered list
+*** start chat, speech call and video call
+** Back: navigates back to the previously visited context
+* Context menu on roles:
+** Remove the role
+** Remove the role and context
+** Remove the filler
+** Fill with item on clipboard
+** Open context of filler
+** Open form for contextrole
+** Any modelled actions (beneath a separator)
+* Hamburger menu:
+** modeled context actions
