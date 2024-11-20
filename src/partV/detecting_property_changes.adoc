@@ -1,0 +1,44 @@
+[desc="A common pattern is to execute some action on behalf of a user when a property changes value. This requires a careful setup of state."]
+== Detecting property changes
+
+I would like a state change to be triggered for the role carrying the property `SomeFile` (a File property) whenever a file is uploaded. For example, the state `NewFileUpload` should become valid.
+
+```text
+state NewFileUpload = exists SomeFile
+```
+
+However, if a file was already present, uploading a new version does not change the state—other than updating the file itself.
+
+This applies to any property, of course. Let `P` be a property that appears in a state condition as `exists P`. Only when `P` gets a value for the first time, or loses its value, does the condition become true or false, respectively.
+
+I solved this by comparing the current timestamp to the timestamp when the state was last visited. If the file is uploaded again, the current timestamp will be later than the timestamp of the previous upload. By including this in the condition, you can make `NewFileUpload` true again.
+
+```text
+state NewFileUpload = (exists SomeFile) and (callExternal sensor:ReadSensor("clock", "now") returns DateTime > LastChangeDT)
+```
+
+**BUT:** This only works if `NewFileUpload` was exited before the next file upload!
+
+This is achieved by the fact that updating the upload timestamp triggers another evaluation of the condition. If this evaluation happens sufficiently later than the upload timestamp, `NewFileUpload` is exited again.
+
+```text
+state NewFileUpload = (exists SomeFile) and (callExternal sensor:ReadSensor("clock", "now") returns DateTime > LastChangeDT)
+  on entry
+    do for SomeUser
+      LastChangeDT = callExternal sensor:ReadSensor("clock", "now") returns DateTime
+```
+
+If the evaluation is fast enough, the re-evaluation timestamp may coincide with the upload timestamp (the clock has a certain resolution). I can make this more robust by requiring that the current timestamp be one second after the upload timestamp in the condition. Since the evaluation is fast, this will not be valid and thus the state will be exited.
+
+```text
+state NewFileUpload = (exists SomeFile) and (callExternal sensor:ReadSensor("clock", "now") returns DateTime > LastChangeDT + 1 second)
+  on entry
+    do for SomeUser
+      LastChangeDT = callExternal sensor:ReadSensor("clock", "now") returns DateTime
+```
+
+This mechanism effectively works to detect a change in a file through uploading (and would apply to changes in any arbitrary property or role). Detection means that the state `NewFileUpload` becomes true—and is exited again. Actions can then be executed on entry and exit.
+
+**However:** The states of the role with the File property can also be evaluated for other reasons. For instance, because another property, `T`, is set. In that case, the condition for `NewFileUpload` is also evaluated. If this happens after the timestamp of the previous upload, `NewFileUpload` will, of course, be re-entered. After all, a file exists, and the evaluation happens later than the last upload.
+
+We currently cannot solve this issue other than ensuring that the role with the file is used exclusively for managing that file. We cannot distinguish between "the state of the role changes due to something involving the file property" and "the state of the role changes."

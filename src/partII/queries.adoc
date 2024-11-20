@@ -11,4 +11,7 @@ include::Compose_instance_and_type_level_functions.adoc[leveloffset=2]
 
 include::The_case_for_Database_Query_Roles.adoc[leveloffset=2]
 
+include::selfonly_and_authoronly.adoc[leveloffset=2]
+
 include::selfOnly_implies_mineOnly.adoc[leveloffset=2]
+

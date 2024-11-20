@@ -1,0 +1,150 @@
+[desc="Two modifiers of perspectives and property definitions to refine modelling."]
+= `selfonly` and `authoronly`
+
+This issue is best explored by examining four examples. 
+
+== `authoronly` perspectives: private notes
+Consider the following model fragment:
+
+[code]
+----
+    thing Notes (Relational)
+      property Text (String)
+    user Author (Relational)
+      perspective on Notes
+        all roleverbs
+        props (Text) verbs (Consult, SetPropertyValue)
+----
+
+The intention of the modeller here is to provide Authors with a collection of Notes, a Note being a written message for his eyes only. However, this model achieves something different: every author can see every note by every other author! This is because the Author's perspective on Notes is unconditional. There is no way to model this, short of creating a new context for each Author with his own Notes. While this is perfectly acceptible, we have added a _modifier_ of perspectives to the language that achieves the same effect: **authoronly**. In the modified model below, each Author ever only sees his own Notes, because the role Notes effectively is ignored in synchronisation. 
+
+[code]
+----
+    thing Notes (Relational)
+      property Text (String)
+    user Author (Relational)
+      perspective on Notes
+        authoronly
+        all roleverbs
+        props (Text) verbs (Consult, SetPropertyValue)
+----
+
+NOTE. If author was a single user role and no other user roles would have a perspective on Notes, it would in effect be for the Author's eyes only, too!
+
+== `authoronly` properties
+An even simpler variant is where we apply `authoronly` to a property. Consider a school where various teachers teach the same pupils. They share a perspective on these pupils, but they want to have the ability to jot down really private remarks about a single pupil. A first approach:
+
+[code]
+----
+    user Pupil (Relational)
+      property Name (String)
+      property Remark (String)
+    user Teacher (Relational)
+      perspective on Pupil
+        props (Name) verbs (Consult)
+        props (Remark) verbs (SetPropertyValue)
+
+----
+
+This will not do. Even though Teachers can all place a Remark on each Pupil, they will share these Remarks. The model falls short on privacy and also doesn't offer to possibility for Teachers to have different notes on the same pupil. Now consider this model:
+
+[code]
+----
+    user Pupil (Relational)
+      property Name (String)
+      property Remark (String, authoronly)
+    user Teacher (Relational)
+      perspective on Pupil
+        props (Name) verbs (Consult)
+        props (Remark) verbs (SetPropertyValue)
+
+----
+
+'Remark' is now `authoronly`. Consequently, the property Remark is ignored in synchronisation. Each Teacher can write her own Remark on each Pupil and Teachers will never know about the comments of their collegues. This is what we want!
+
+NOTE. Readers coming from a relational modelling background may find this harder to understand. In a relational database, these private notes would be understood in terms of the _relation_ between Pupil and Teacher. The one-to-one relationships would be seen as reified - that is, as things in themselves - and then a Note could be attached to each of them. We think the Perspectives way is more like the pre-digital understanding: teachers just keep their notes to themselves.
+
+== `selfonly` perspectives
+Consider the case of a psychiatrist. He has one-to-one relationships with his clients up to the point that a client doesn't even know the identity of other clients. Nevertheless, from the perspective of the psychiatrist, all clients are equal (to prevent misunderstandings: only insofar as it concerns his requirements for a supporting information infrastructure!). A first attempt at a model contain a flaw:
+
+[code]
+----
+    user Client (Relational)
+      property Report (String)
+      perspective on Client
+        props (Report) verbs (Consult)
+    user Psychiatrist
+      perspective on Client
+        all roleverbs
+        props (Report) verbs (SetPropertyValue)
+----
+
+The Psychiatrist obviously is aware of all of his Clients. A Client - a multirole! - requires a perspective on himself in order to be able to read the Report that the Psychiatrist writes about him. However, in the model above, each Client can read all Reports - cleary undesirable. This is how we remedy that with `selfonly` on the perspective:
+
+[code]
+----
+    user Client (Relational)
+      property Report (String)
+      perspective on Client
+        selfonly
+        props (Report) verbs (Consult)
+    user Psychiatrist
+      perspective on Client
+        all roleverbs
+        props (Report) verbs (SetPropertyValue)
+----
+
+When the Psychiatrist adds a new Client to his list, the synchronisation algorithm looks for user roles having a perspective on Client and finds 'Client'. It would then send the new role instance to instances of that user role - thus, to all Client instances. However, being a `selfonly` perspective, it now sends it just to the Client himself. 
+
+NOTE. `selfonly` only applies usefully to a self-perspective: that is, the perspective of a User role on that same User role. Moreover, if CLient was a functional role, `selfonly` would not change anything.
+
+== `selfonly` properties
+Finally, consider an education setting again. Let there be a high school class consisting of multiple pupils and a teacher teaching some subject. Now the pupils obviously are aware of each others existence, but when the teacher grades their work, that should be confidential. The first model comes close:
+
+[code]
+----
+    user Pupil (relational)
+      property Name (String)
+      property Grade (Int)
+      perspective on Pupil
+        props (Name, Grade) verbs (Consult)
+    user Teacher
+      perspective on Pupil
+        props (Grade) verbs (SetPropertyValue)
+----
+
+Pupils have a self perspective and know each other. The Teacher can put a Grade on each Pupil (notice that in a more realistic setting there would be multiple grades, but this model sufficiently illustrates the point we're trying to make). However, they all can see each others Grades. Once again, `selfonly` comes to the rescue:
+
+----
+    user Pupil (relational)
+      property Name (String)
+      property Grade (Int, selfonly)
+      perspective on Pupil
+        props (Name, Grade) verbs (Consult)
+    user Teacher
+      perspective on Pupil
+        props (Grade) verbs (SetPropertyValue)
+----
+
+Now each Pupil just knows his own Grade. Consider what would happen if we had made the entire self-perspective of Pupil `selfonly`: they would not see each other (in the information structure).
+
+== Putting it all together
+`authoronly` on the perspective on a role (the _object_) is useful when
+
+* the user role is a writing multirole (and you want to keep the perspective objects private to each author)
+* there are other writing roles with a perspective on the same object (if there were only other reading roles, they would never see a thing!).
+
+`authoronly` on a property is useful when there are multiple user role instances that need to keep private values on the object.
+
+`selfonly` on a perspective on a role is useful when
+
+* the perspective is a self-perspective (the user is the same as the object)
+* the user role is a multirole
+* and another role is the author of the object role instance (otherwise `authoronly` would do the job in a simpler way).
+
+
+Finally, `selfonly` on a property is useful when
+
+* the property is part of a self-perspective
+* of a multi-user role
+* and another role is the author of the property's values (otherwise `authoronly` would do the job in a simpler way).
