@@ -20,3 +20,11 @@ It seems as though FireFox doesn't suffer from the same problem. This might be b
 	(https://fetch.spec.whatwg.org/)
 
 It looks like Chrome defaults to "no-cors" and Firefox does not.
+
+== AffJax
+Affjax uses XmlHttpRequests. Some points to notice:
+* withCredentials should be set to false
+* when content-type is Application/Json, this causes the SharedWorker context to consider it a CORS request. 
+* Consequently, the server should respond with a header Access-Control-Allow-Origin that includes the origin of the request. C.q. https://mycontexts.com (no trailing slash).
+* In the Apache configuration, when handling an OPTIONS to return no response, we should use the 'always' keyword to make sure the header is sent even when the response is empty.
+* Apache doesn't send headers in sections in which we configure Apache to handle OPTIONS with SetHandler or rewriting. Hence we should send the headers not in e.g. a Location section where we handle OPTIONS in this way, but in the main Virtual host.

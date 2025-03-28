@@ -65,7 +65,7 @@ This will not do. Even though Teachers can all place a Remark on each Pupil, the
 NOTE. Readers coming from a relational modelling background may find this harder to understand. In a relational database, these private notes would be understood in terms of the _relation_ between Pupil and Teacher. The one-to-one relationships would be seen as reified - that is, as things in themselves - and then a Note could be attached to each of them. We think the Perspectives way is more like the pre-digital understanding: teachers just keep their notes to themselves.
 
 == `selfonly` perspectives
-Consider the case of a psychiatrist. He has one-to-one relationships with his clients up to the point that a client doesn't even know the identity of other clients. Nevertheless, from the perspective of the psychiatrist, all clients are equal (to prevent misunderstandings: only insofar as it concerns his requirements for a supporting information infrastructure!). A first attempt at a model contain a flaw:
+Consider the case of a psychiatrist. He has one-to-one relationships with his clients up to the point that a client doesn't even know the identity of other clients. Nevertheless, from the perspective of the psychiatrist, all clients are equal (to prevent misunderstandings: only insofar as it concerns his requirements for a supporting information infrastructure!). A first attempt at a model contains a flaw:
 
 [code]
 ----
@@ -96,7 +96,7 @@ The Psychiatrist obviously is aware of all of his Clients. A Client - a multirol
 
 When the Psychiatrist adds a new Client to his list, the synchronisation algorithm looks for user roles having a perspective on Client and finds 'Client'. It would then send the new role instance to instances of that user role - thus, to all Client instances. However, being a `selfonly` perspective, it now sends it just to the Client himself. 
 
-NOTE. `selfonly` only applies usefully to a self-perspective: that is, the perspective of a User role on that same User role. Moreover, if CLient was a functional role, `selfonly` would not change anything.
+NOTE. `selfonly` only applies usefully to a self-perspective: that is, the perspective of a User role on that same User role. Moreover, if Client was a functional role, `selfonly` would not change anything.
 
 == `selfonly` properties
 Finally, consider an education setting again. Let there be a high school class consisting of multiple pupils and a teacher teaching some subject. Now the pupils obviously are aware of each others existence, but when the teacher grades their work, that should be confidential. The first model comes close:
