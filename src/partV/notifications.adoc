@@ -5,27 +5,49 @@ The notification mechanism is partly built into the Perspectives Distributed Run
 
 [code]
 ----
+  -- Use this as an aspect in contexts that should store their own notifications.
+  -- PDRDEPENDENCY
   case ContextWithNotification
-    thing Notifications (relational)
+    -- PDRDEPENDENCY
+    context Notifications (relational)
+      -- PDRDEPENDENCY
       property Message (String)
     user NotifiedUser
       perspective on Notifications
+        only (Remove, Delete, RemoveContext, DeleteContext)
+        props (Message) verbs (Consult)
         action DeleteNotifications
           delete role Notifications
 ----
 
-Add ContextWithNotification as an Aspect to a context that you model to receive notifications. It adds the role Notifications and the InPlace graphical user interface has a place to show them.
+Add ContextWithNotification as an Aspect to a context that you model to receive notifications. Then add the aspect role Notifications and give the user who must be notified the aspect role NotifiedUser.
 
-Actually, this place is visible only when you visit the context itself. Nevertheless, when a notification is generated, it will appear as a notification on screen, using the operating system notification mechanism. 
+The notifications can be inspected in the context itself. But when a notification is generated, it will appear as a notification on screen, using the operating system notification mechanism. 
 
 === Notification in the system context
 Notifying by adding a role to a context is somewhat of an antipattern when you want to notify the user on exit of a context. Consider what happens: your on exit action is run, it adds a Notifications role instance to the context – which is then instantly removed with all of its roles!
 
-The graphical client, however, relies on displaying the Notifications instances in a context. Clearly, this should not work and it does not. To clarify the mechanism further, it is not even shown transiently using the operating system notification system; this, too, is only triggered when a new Notifications role instance is detected.
+As the graphical client relies on displaying the Notifications instances in a context, this will not work. Even worse, a notification generated on exit is not even shown transiently by the operating system notification system; it, too, is only triggered when a new Notifications role instance is detected.
 
 In such cases you can resort to 
 
 •	either notify in the embedding context, where the contextrole pointing to the context is removed (create an on exit there);
 •	or notify in the system context.
 
-The former requires you to add the ContextWithNotification Aspect to your embedding context. To achieve the latter, you don’t use Aspects at all. The system context is the default where Notifications are stored when they are no
+The former requires you to add the ContextWithNotification Aspect to your embedding context. To achieve the latter, you don’t use Aspects at all. The system context is the default where Notifications are stored when they are not stored in a specific context.
+
+=== An example
+Notice the context aspect, the aspect thing role and the user role aspect.
+[code]
+----
+  case DisconnectedPeer
+    aspect sys:ContextWithNotification
+    user Disconnecter filledBy sys:TheWorld$PerspectivesUsers
+      aspect sys:ContextWithNotification$NotifiedUser
+      state ActionsCanBeTaken = exists binding
+        on entry
+          do
+            create role sys:Chat
+          notify "You can now start a chat with the peer."
+    aspect thing sys:ContextWithNotification$Notifications
+----

@@ -6,4 +6,4 @@ cp -R images/ output
 
 cp src/overview.pdf output
 
-asciidoctor-multipage src/overview.adoc -D output
+$(gem environment gemdir)/bin/asciidoctor-multipage src/overview.adoc -D output
