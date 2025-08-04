@@ -83,7 +83,23 @@ We’ve chosen this model because it allows the modeller to form a clear picture
 
 This is not to say that understanding automatic actions is always easy.
 
+== Parallel execution versus closed state
 Another way of looking at this execution model is that state changes of various resources happen in parallel. If a statement sequence triggers state change with automatic actions in two other resources, these will execute (as if) in parallel. This means one should never count on a particular order of their execution!
+
+In the example of the previous section, this means that if we execute action A, we create an instance of SomeRole **and at the same time** we set the value of SomeProperty. Clearly, the property AnotherProperty is not yet set - the role instance is in the process of being created and only then will its property be given a value.
+
+However, this understanding of parallel execution can break down when we consider multiple resources that transition into a state at the same time (because of a change that underlies both their conditions). If, on entry of their states, they would undo the change that caused them to enter the state, only one of them would be able to do so. This is because after the change is made, the other resource would then no longer find itself in the state.
+
+An example of this is the Startup property on the external role of PerspectivesSystem. On system startup, the PDR sets this property to true. Any resource that enters a state on condition of this property being true, should execute its on entry action. However, we've modelled the Startup state of PerspectivesSystem$External such that it sets Startup to false again (preparing the system for the next startup). Now, only if this automatic action would be the last to execute (among all other automatic actions that must be performed on startup), would the other actions be executed. Were it the first, none of them would. But execution order is unpredictable.
+
+Why not evaluate state changes first, collect all actions and then execute them? 
+
+Triggering actions would be more predictable, but it would break another desirable property of the execution model: that the actions are executed in a state that is guaranteed by the state condition. We call this the _closed state_ property. This means that the state condition of a resource is guaranteed to hold when its on entry action is executed. If we were to collect all actions and then execute them, this would not be guaranteed. Thus, we have a way to ensure that particular resources are available or have certain properties set, when the action is executed.
+
+The downside is that actions can meddle with the conditions of other resources, which may lead to some state transitions unexpectedly not happening. This is a risk that the modeller must take into account when writing actions.
+
+For system startup we have countered this by postponing the execution of the on entry action of PerspectivesSystem$External for a minute. This gives the system time to execute other state transitions that depend on the Startup property - but notice that this will break if the sum duration of those actions exceeds a minute!
+
 
 == Removing a role instance
 
